@@ -29,8 +29,8 @@ PlayerStore.draw = function() {
   _context.beginPath();
 
   var lines = {
-    VERTICAL:   [[3,0,10,0],[-3,0,-10,0]],
-    HORIZONTAL: [[0,3,0,10],[0,-3,0,-10]]
+    HORIZONTAL:   [[3,0,10,0],[-3,0,-10,0]],
+    VERTICAL: [[0,3,0,10],[0,-3,0,-10]]
   }
 
   lines[_direction].forEach(function(line){
@@ -60,30 +60,29 @@ PlayerStore.attemptMove = function() {
 
   var d = GameConstants.NEW_WALL_SPEED;
   var directions = _direction === 'VERTICAL' ?
-    [{dX: 0, dY: d}, {dX:  0, dY: -d}] :
-    [{dX: d, dY: 0}, {dX: -d, dY:  0}];
+    [{dX: 0, dY: 1}, {dX:  0, dY: -1}] :
+    [{dX: 1, dY: 0}, {dX: -1, dY:  0}];
+
+  var xCoord = Math.round((_position.xPos - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH);
+  var yCoord = Math.round((_position.yPos - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH);
 
   var boardSegments = BoardStore.beingCreatedSegments();
-
-  debugger;
 
   if (!boardSegments.length) {
 
     BoardStore.setNewSegments( [
       new Segment(
-        _position.xPos,
-        _position.yPos,
-        _position.xPos,
-        _position.yPos,
-        directions[0]
+        {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
+        {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
+        directions[0],
+        'UP'
       ),
 
       new Segment(
-        _position.xPos,
-        _position.yPos,
-        _position.xPos,
-        _position.yPos,
-        directions[1]
+        {x: xCoord, y: yCoord},
+        {x: xCoord, y: yCoord},
+        directions[1],
+        'DOWN'
       )
     ]);
 

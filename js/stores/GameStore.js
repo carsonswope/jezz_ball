@@ -10,7 +10,7 @@ var MathUtil = require('../util/MathUtil');
 
 var GameStore = new Store(AppDispatcher);
 
-var _lives = 5;
+var _lives = 10;
 var _level = 1;
 var _time = 0;
 var _status = 'WAITING';
@@ -45,7 +45,7 @@ GameStore.startLevel = function() {
 
 GameStore.startGame = function() {
 
-  _lives = 5;
+  _lives = 10;
   _level = 1;
 
   GameStore.startLevel();
@@ -70,105 +70,89 @@ GameStore.tick = function(newTime) {
 
 GameStore.checkForCollisions = function() {
 
-  var minDist = (GameConstants.LINE_WIDTH / 1.2) + GameConstants.BALL_RADIUS;
-
   var solidSegs = BoardStore.solidSegments();
   var beingMadeSegs = BoardStore.beingCreatedSegments();
   var balls = BallStore.balls();
   var dist;
+  var toBounce;
 
-  for (var i = 0; i < solidSegs.length; i++) {
-    for (var j = 0; j < balls.length; j++) {
+  var minDist = GameConstants.BALL_RADIUS + 2;
 
+  for (var j = 0; j < balls.length; j++) {
 
-      dist = MathUtil.distanceCircleToSegment(
-        balls[j], solidSegs[i]
-      );
+    toBounce = [];
+    for (var i = 0; i < solidSegs.length; i++) {
 
-      if (dist < minDist) {
-        GameStore.handleBallOnSolidSegmentCollision(
-          balls[j], solidSegs[i]
-        );
+      dist = solidSegs[i].distanceCheck(balls[j]);
+
+      if (dist.distance < minDist && toBounce.indexOf(dist.line) === -1 &&
+          solidSegs[i].acceptableBounce(balls[j], dist.line)) {
+        toBounce.push(dist.line);
       }
 
     }
+
+    toBounce.forEach(function(line){
+      balls[j].bounce(line);
+    });
+
   }
 
   var toRemove = [];
 
   for (var i = 0; i < beingMadeSegs.length; i++) {
-    for (var j = 0; j < balls.length; j++) {
-      dist = MathUtil.distanceCircleToSegment(
-        balls[j],
-        beingMadeSegs[i]
-      );
 
-      if (dist < GameConstants.LINE_WIDTH / 2 &
-          toRemove.indexOf(i) === -1) {
+    seg = beingMadeSegs[i];
+
+    for (var j = 0; j < balls.length; j++) {
+
+      dist = seg.distanceCheck(balls[j]);
+
+      if (dist.distance < GameConstants.BALL_RADIUS && toRemove.indexOf(i) === -1){
+
         toRemove.push(i);
+
       }
+
     }
   }
 
-  if (toRemove.length) {
-    BoardStore.removeSegments(toRemove);
-  }
+  if (toRemove.length) {BoardStore.removeSegments(toRemove); }
 
-  var old;
-  var toTransfer = [];
+  var solidSegs = BoardStore.solidSegments();
+  var beingMadeSegs = BoardStore.beingCreatedSegments();
+  var balls = BallStore.balls();
+
+  var seg;
+  var toSolidify = [];
 
   for (var i = 0; i < solidSegs.length; i++) {
-
-    old = solidSegs[i];
-
     for (var j = 0; j < beingMadeSegs.length; j++) {
 
-      debugger;
+      seg = beingMadeSegs[j];
 
-      var point = {
-        posX: beingMadeSegs[j].endX,
-        posY: beingMadeSegs[j].endY,
-      }
+      var endCoordX = seg.endCoord.x// + (seg.direction.dX * 0.5);
+      var endCoordY = seg.endCoord.y// + (seg.direction.dY * 0.5);
 
-      dist = MathUtil.distanceCircleToSegment(
-        point,
-        old
-      );
+      var endPosX = (endCoordX + 0.5) * GameConstants.LINE_WIDTH;
+      var endPosY = (endCoordY + 0.5) * GameConstants.LINE_WIDTH;
 
-      if (dist < GameConstants.LINE_WIDTH / 1 &&
-          toTransfer.indexOf(j) === -1) {
-        toTransfer.push(j);
+      dist = solidSegs[i].distanceCheck({
+        posX: endPosX,
+        posY: endPosY
+      });
+
+      if (dist.distance < GameConstants.LINE_WIDTH / 2) {
+
+        seg.endCoord.x = Math.round(endCoordX);
+        seg.endCoord.y = Math.round(endCoordY);
+
+        toSolidify.push(j);
       }
     }
   }
 
-  if (toTransfer.length) {
-    BoardStore.solidifySegments(toTransfer);
-  }
-
-};
-
-
-GameStore.handleBallOnSolidSegmentCollision = function(ball, segment) {
-
-  // if (!ball.justCollidedWith === segment){
-
-    var segmentAngle = Math.atan2(
-      segment.endX - segment.startX,
-      segment.endY - segment.startY
-    );
-
-    var velX = Math.sin(ball.angle);
-    var velY = Math.cos(ball.angle);
-
-    if (segmentAngle == Math.PI / 2 || segmentAngle == - Math.PI / 2 ) {
-      velY = -1 * velY;
-    } else {
-      velX = -1 * velX;
-    }
-    ball.justCollidedWith = segment;
-    ball.angle = Math.atan2(velX, velY);
-  // }
+  if (toSolidify.length) { BoardStore.solidifySegments(toSolidify); }
 
 };
 

@@ -20,7 +20,20 @@ BallStore.reset = function(ballCount) {
 
   for (var i = 0; i < ballCount; i++) {
 
+    //percentage of one quadrant:
+
+    var dist = 0.2;
+
+    var a = Math.random() * (Math.PI / 2) * dist;
+
+
+
+    a += (Math.PI / 2) * ((1 - dist) / 2);
+
+    a += (Math.PI / 2) * Math.floor(Math.random()*4);
+
     var angle = Math.random() * Math.PI * 2;
+    angle = a;
     var randomX = (Math.random() * (width)) + (width / 2);
     var randomY = (Math.random() * (height))+ (height / 2);
 

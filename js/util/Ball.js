@@ -4,7 +4,22 @@ function Ball(posX, posY, angle) {
   this.angle = angle;
   this.posX = posX;
   this.posY = posY;
-  this.justCollidedWith = null;
+};
+
+Ball.prototype.bounce = function(lineDirection) {
+
+
+  var velX = Math.sin(this.angle);
+  var velY = Math.cos(this.angle);
+
+  if (lineDirection === 'HORIZONTAL') {
+    velY = -1 * velY;
+  } else if (lineDirection === 'VERTICAL'){
+    velX = -1 * velX;
+  }
+
+  this.angle = Math.atan2(velX, velY);
+
 };
 
 Ball.prototype.draw = function(ctx) {

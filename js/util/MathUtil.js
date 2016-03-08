@@ -1,6 +1,6 @@
 // thanks stack overflow
 
-function pDistance(x, y, x1, y1, x2, y2) {
+exports.pDistance = function(x, y, x1, y1, x2, y2) {
 
   var A = x - x1;
   var B = y - y1;
@@ -35,7 +35,7 @@ function pDistance(x, y, x1, y1, x2, y2) {
 
 exports.distanceCircleToSegment = function(circle, segment) {
 
-  return pDistance(
+  return exports.pDistance(
     circle.posX,
     circle.posY,
     segment.startX,

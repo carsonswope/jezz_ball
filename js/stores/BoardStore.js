@@ -38,26 +38,27 @@ BoardStore.solidSegments = function() {
 
 BoardStore.solidifySegments = function(segs) {
 
+  debugger;
+
   if (segs.length === 2) {
 
     var seg1 = _beingCreatedSegments.pop();
     var seg2 = _beingCreatedSegments.pop();
 
-    seg1.tick(15);
-    seg2.tick(15);
+    // seg1.tick(15);
+    // seg2.tick(15);
 
     _solidSegments.push(seg1)
     _solidSegments.push(seg2)
   } else if (segs[0] === 1) {
 
     var seg = _beingCreatedSegments.pop();
-    seg.tick(15);
 
     _solidSegments.push(seg)
   } else {
 
     var seg = _beingCreatedSegments.shift();
-    seg.tick(15);
+
 
     _solidSegments.push(seg)
 
@@ -95,7 +96,6 @@ BoardStore.draw = function() {
   }
 
   for (var i = 0; i < _beingCreatedSegments.length; i++) {
-    debugger;
     _beingCreatedSegments[i].draw(_context, 'SOLID');
   }
 
@@ -103,22 +103,18 @@ BoardStore.draw = function() {
 
 BoardStore.reset = function() {
 
-  var o = GameConstants.LINE_WIDTH / 2;
-  var h = GameConstants.CANVAS_HEIGHT - o;
-  var w = GameConstants.CANVAS_WIDTH  - o;
-
-  _horizontalDivisions = Math.floor(GameConstants.CANVAS_WIDTH);
-  _verticalDivisions = Math.floor(GameConstants.CANVAS_HEIGHT);
+  _horizontalDivisions = Math.floor(GameConstants.CANVAS_WIDTH /  GameConstants.LINE_WIDTH) - 1;
+  _verticalDivisions = Math.floor(GameConstants.CANVAS_HEIGHT / GameConstants.LINE_WIDTH) - 1;
 
   var h = _verticalDivisions;
   var w = _horizontalDivisions;
 
   _solidSegments = [
-    new Segment({x: 0, y: 0}, {x: 0, y: h}),
-    new Segment({x: 1, y: h}, {x: w-1, y: h}),
-    new Segment({x: w, y: h}, {x: w, y: 0}),
-    new Segment({x: w-1, y: 0}, {x: 1, y: 0})
-  ]
+    new Segment({x: 0,   y: 0}, {x: 0,   y: h}),
+    new Segment({x: 1,   y: h}, {x: w-1, y: h}),
+    new Segment({x: w,   y: h}, {x: w,   y: 0}),
+    new Segment({x: w-1, y: 0}, {x: 1,   y: 0})
+  ];
 
 };
 
