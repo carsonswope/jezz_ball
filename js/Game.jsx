@@ -47,10 +47,27 @@ var Game = React.createClass({
 
   handleClick: function(e) {
     e.preventDefault();
+
+    AppDispatcher.dispatch({
+      actionType: GameConstants.actions.ATTEMPT_MOVE
+    })
   },
 
   handleKey: function(e) {
 
+    if (e.keyCode === 32) {
+
+      Actions.switchPlayerDirection();
+
+    };
+  },
+
+  handleMouseMove: function(e) {
+
+    var xPos = e.clientX;
+    var yPos = e.clientY;
+
+    Actions.setPlayerPosition(xPos, yPos);
   },
 
   gameChange: function() {
@@ -80,6 +97,7 @@ var Game = React.createClass({
       <div onKeyDown={this.handleKey}>
 
         <canvas id='game-canvas' ref='gameCanvas'
+          onMouseMove={this.handleMouseMove}
           onClick={this.handleClick}>
         </canvas>
 

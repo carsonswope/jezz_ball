@@ -23,3 +23,19 @@ exports.tick = function() {
     });
   });
 };
+
+exports.setPlayerPosition = function(xPos, yPos) {
+  AppDispatcher.dispatch({
+    actionType: GameConstants.actions.SET_PLAYER_POSITION,
+    position: {
+      xPos: xPos,
+      yPos: yPos
+    }
+  });
+};
+
+exports.switchPlayerDirection = function(){
+  AppDispatcher.dispatch({
+    actionType: GameConstants.actions.SWITCH_PLAYER_DIRECTION
+  })
+}

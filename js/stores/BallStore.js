@@ -49,6 +49,17 @@ BallStore.tick = function(dT) {
 
     ball.posX += dX;
     ball.posY += dY;
+
+    // if (ball.justCollidedWith) {
+    //   ball.collideCount += 1
+    //   ball.justCollidedWith += 1;
+    // }
+    //
+    // if (ball.collideCount > 2) {
+    //   ball.collideCount = 0;
+    //   ball.justCollidedWith = null;
+    // }
+
   }
 
 };

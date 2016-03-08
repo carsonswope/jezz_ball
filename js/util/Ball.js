@@ -2,8 +2,9 @@ var GameConstants = require('../constants/GameConstants');
 
 function Ball(posX, posY, angle) {
   this.angle = angle;
-  this.posX = posX,
-  this.posY = posY
+  this.posX = posX;
+  this.posY = posY;
+  this.justCollidedWith = null;
 };
 
 Ball.prototype.draw = function(ctx) {

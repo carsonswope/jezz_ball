@@ -23,11 +23,63 @@ var _context;
 
 BoardStore.tick = function(dT) {
 
+  for (var i = 0; i < _beingCreatedSegments.length; i++) {
+    _beingCreatedSegments[i].tick(dT);
+  }
 
 };
 
 BoardStore.solidSegments = function() {
   return _solidSegments;
+};
+
+BoardStore.solidifySegments = function(segs) {
+
+  if (segs.length === 2) {
+
+    var seg1 = _beingCreatedSegments.pop();
+    var seg2 = _beingCreatedSegments.pop();
+
+    seg1.tick(15);
+    seg2.tick(15);
+
+    _solidSegments.push(seg1)
+    _solidSegments.push(seg2)
+  } else if (segs[0] === 1) {
+
+    var seg = _beingCreatedSegments.pop();
+    seg.tick(15);
+
+    _solidSegments.push(seg)
+  } else {
+
+    var seg = _beingCreatedSegments.shift();
+    seg.tick(15);
+
+    _solidSegments.push(seg)
+
+  }
+}
+
+BoardStore.removeSegments = function(segs) {
+
+  if (segs.length === 2) {
+    _beingCreatedSegments.pop();
+    _beingCreatedSegments.pop();
+  } else if (segs[0] === 1) {
+    _beingCreatedSegments.pop();
+  } else {
+    _beingCreatedSegments.shift();
+  }
+}
+
+
+BoardStore.beingCreatedSegments = function() {
+  return _beingCreatedSegments;
+};
+
+BoardStore.setNewSegments = function(segments) {
+  _beingCreatedSegments = segments;
 };
 
 
@@ -37,6 +89,11 @@ BoardStore.draw = function() {
 
   for (var i = 0; i < _solidSegments.length; i++) {
     _solidSegments[i].draw(_context, 'SOLID');
+  }
+
+  for (var i = 0; i < _beingCreatedSegments.length; i++) {
+    debugger;
+    _beingCreatedSegments[i].draw(_context, 'SOLID');
   }
 
 };

@@ -1,10 +1,11 @@
 var GameConstants = require('../constants/GameConstants');
 
-function Segment(startX, startY, endX, endY){
+function Segment(startX, startY, endX, endY, direction){
     this.startX = startX;
     this.startY = startY;
     this.endX = endX;
     this.endY = endY;
+    this.direction = direction;
 };
 
 Segment.prototype.start = function(){
@@ -12,6 +13,11 @@ Segment.prototype.start = function(){
     startX: this.startX,
     startY: this.startY
   }
+}
+
+Segment.prototype.tick = function(dT){
+  this.endX = this.endX + (this.direction.dX * dT);
+  this.endY = this.endY + (this.direction.dY * dT);
 }
 
 Segment.prototype.end = function(){
