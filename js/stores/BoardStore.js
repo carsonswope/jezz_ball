@@ -13,6 +13,9 @@ var _beingCreatedSegments = [];
 var _rectangles = [];
 var _context;
 
+var _horizontalDivisions = 0;
+var _verticalDivisions = 0;
+
 // a segment looks like this:
 //  {
 //   startX:
@@ -104,11 +107,17 @@ BoardStore.reset = function() {
   var h = GameConstants.CANVAS_HEIGHT - o;
   var w = GameConstants.CANVAS_WIDTH  - o;
 
+  _horizontalDivisions = Math.floor(GameConstants.CANVAS_WIDTH);
+  _verticalDivisions = Math.floor(GameConstants.CANVAS_HEIGHT);
+
+  var h = _verticalDivisions;
+  var w = _horizontalDivisions;
+
   _solidSegments = [
-    new Segment(o,    0,      o,    h + o),
-    new Segment(o,    h,      w,    h),
-    new Segment(w,    h + o,  w,    0),
-    new Segment(w,    o,      o,    o)
+    new Segment({x: 0, y: 0}, {x: 0, y: h}),
+    new Segment({x: 1, y: h}, {x: w-1, y: h}),
+    new Segment({x: w, y: h}, {x: w, y: 0}),
+    new Segment({x: w-1, y: 0}, {x: 1, y: 0})
   ]
 
 };
