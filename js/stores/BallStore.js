@@ -12,16 +12,46 @@ var _context;
 
 BallStore.reset = function(ballCount) {
 
-  _balls = [
-    new Ball(300, 300)
-  ];
+  _balls = [];
 
+  var lineWidth = GameConstants.LINE_WIDTH;
+  var width = GameConstants.CANVAS_WIDTH * 0.5;
+  var height = GameConstants.CANVAS_HEIGHT * 0.5;
+
+  for (var i = 0; i < ballCount; i++) {
+
+    var angle = Math.random() * Math.PI * 2;
+    var randomX = (Math.random() * (width)) + (width / 2);
+    var randomY = (Math.random() * (height))+ (height / 2);
+
+    _balls.push(
+      new Ball(randomX, randomY, angle)
+    );
+  }
+
+};
+
+BallStore.balls = function() {
+  return _balls;
 };
 
 BallStore.tick = function(dT) {
 
-};
+  var ball;
+  var dX;
+  var dY;
 
+  for (var i = 0; i < _balls.length; i++) {
+    var ball = _balls[i];
+
+    dX = Math.sin(ball.angle) * dT * GameConstants.BALL_SPEED;
+    dY = Math.cos(ball.angle) * dT * GameConstants.BALL_SPEED;
+
+    ball.posX += dX;
+    ball.posY += dY;
+  }
+
+};
 
 BallStore.draw = function() {
 

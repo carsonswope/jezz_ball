@@ -1,8 +1,8 @@
-exports.CANVAS_WIDTH = 1000;
-exports.CANVAS_HEIGHT = 600;
+exports.CANVAS_WIDTH = 200;
+exports.CANVAS_HEIGHT = 200;
 
 exports.NEW_WALL_SPEED = 10;
-exports.BALL_SPEED = 10;
+exports.BALL_SPEED = 0.2;
 exports.PERCENTAGE_TO_WIN = 75;
 
 exports.SOLID_SEGMENT_COLOR = 'black';

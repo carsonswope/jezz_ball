@@ -15,10 +15,11 @@ exports.startGame = function() {
 
 };
 
-exports.tick = function(time) {
-  AppDispatcher.dispatch({
-    actionType: GameConstants.actions.TICK,
-    time: time
+exports.tick = function() {
+  requestAnimationFrame( function(time){
+    AppDispatcher.dispatch({
+      actionType: GameConstants.actions.TICK,
+      time: time
+    });
   });
-  requestAnimationFrame(exports.tick);
 };

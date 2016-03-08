@@ -26,6 +26,10 @@ BoardStore.tick = function(dT) {
 
 };
 
+BoardStore.solidSegments = function() {
+  return _solidSegments;
+};
+
 
 BoardStore.draw = function() {
 

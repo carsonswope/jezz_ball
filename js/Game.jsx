@@ -13,6 +13,14 @@ var GameConstants = require('./constants/GameConstants');
 
 var Game = React.createClass({
 
+  getInitialState: function() {
+
+    return {
+      gameStatus: GameStore.status()
+    }
+
+  },
+
   componentDidMount: function() {
 
     this.canvas = this.refs.gameCanvas;
@@ -26,12 +34,15 @@ var Game = React.createClass({
 
     document.addEventListener('keydown', this.handleKey, false);
 
-    requestAnimationFrame(Actions.tick);
+    this.gameListener = GameStore.addListener(this.gameChange);
+
+    Actions.startGame();
 
   },
 
   componentWillUnmount: function(){
     document.removeEventListener('keydown', this.handleKey);
+    this.gameListener.remove();
   },
 
   handleClick: function(e) {
@@ -39,6 +50,28 @@ var Game = React.createClass({
   },
 
   handleKey: function(e) {
+
+  },
+
+  gameChange: function() {
+    var gameStatus = GameStore.status();
+
+    switch (gameStatus) {
+      case 'PLAYING':
+        Actions.tick();
+        break;
+      case 'DEAD':
+
+        break;
+      case 'WAITING':
+
+        break;
+
+    }
+
+    if (gameStatus === 'PLAYING') {
+      // Actions.tick();
+    }
 
   },
 
