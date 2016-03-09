@@ -75,7 +75,7 @@ var Game = React.createClass({
 
         break;
       case 'WAITING':
-
+        Actions.tick();
         break;
 
     }

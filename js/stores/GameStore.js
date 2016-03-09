@@ -56,24 +56,28 @@ GameStore.startGame = function() {
 
 GameStore.tick = function(newTime) {
 
-  var dT = newTime - _time;
-  _time = newTime;
+  if (_status === 'PLAYING'){
 
-  if (dT > 22) { dT = 0; }
+    var dT = newTime - _time;
+    _time = newTime;
 
-  BoardStore.tick(dT);
-  BallStore.tick(dT);
+    if (dT > 22) { dT = 0; }
 
-  GameStore.checkForCollisions();
+    BoardStore.tick(dT);
+    BallStore.tick(dT);
+
+    GameStore.checkForCollisions();
+
+    if (_lives < 1) {
+      _status = 'DEAD';
+    } else if (BoardStore.percentageFinished() > 0.75 &&
+      !BoardStore.beingCreatedSegments().length) {
+      GameStore.finishLevel();
+    }
+
+  }
 
   GameStore.draw();
-
-  if (_lives < 1) {
-    _status = 'DEAD';
-  } else if (BoardStore.percentageFinished() > 0.75 &&
-    !BoardStore.beingCreatedSegments().length) {
-    GameStore.finishLevel();
-  }
 
   GameStore.__emitChange();
 
@@ -174,7 +178,19 @@ GameStore.draw = function() {
 
   BallStore.draw();
   BoardStore.draw();
+
+  if (_status === 'WAITING'){
+    _context.fillStyle = 'rgba(200,200,0,0.5)';
+    _context.strokeStyle = 'rgba(200,240,0,0.5)';
+    _context.lineWidth = 20
+    _context.strokeRect(100,100,GameConstants.CANVAS_WIDTH - 200,200);
+    _context.fill();
+    _context.stroke();
+
+  }
+
   PlayerStore.draw();
+
 
 };
 

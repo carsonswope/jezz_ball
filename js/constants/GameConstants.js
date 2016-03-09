@@ -11,7 +11,7 @@ exports.CANVAS_HEIGHT = 500;
 
 exports.NEW_WALL_SPEED = 0.03;
 exports.BALL_SPEED = 0.5;
-exports.PERCENTAGE_TO_WIN = 78;
+exports.PERCENTAGE_TO_WIN = 18;
 
 exports.SOLID_SEGMENT_COLOR = 'rgba(0,0,10,1)';
 exports.DOWN_COLOR = 'rgba(0,0,200,1)';
