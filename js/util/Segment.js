@@ -68,6 +68,57 @@ Segment.prototype.draw = function(ctx){
 
 }
 
+Segment.prototype.allCoordinates = function() {
+
+  this.startCoord
+  this.endCoord
+
+  var coords = []
+
+  if (this.startCoord.x === this.endCoord.x) {
+    //horizontal line
+
+    if (this.startCoord.y < this.endCoord.y) {
+      for (var i = this.startCoord.y; i <= this.endCoord.y; i++) {
+        coords.push({
+          x: this.startCoord.x,
+          y: i
+        });
+      }
+    } else {
+      for (var i = this.startCoord.y; i >= this.endCoord.y; i--) {
+        coords.push({
+          x: this.startCoord.x,
+          y: i
+        });
+      }
+    }
+
+  } else {
+    //vertical line
+
+    if (this.startCoord.x < this.endCoord.x) {
+      for (var i = this.startCoord.x; i <= this.endCoord.x; i++) {
+        coords.push({
+          x: this.startCoord.y,
+          y: i
+        });
+      }
+    } else {
+      for (var i = this.startCoord.x; i >= this.endCoord.x; i--) {
+        coords.push({
+          x: this.startCoord.y,
+          y: i
+        });
+      }
+    }
+
+  }
+
+  return coords;
+
+};
+
 Segment.prototype.vertices = function() {
 
   var toDrawCoords =
@@ -119,8 +170,6 @@ Segment.prototype.acceptableBounce = function(ball, line) {
 
   var origDistance = this.distanceCheck(ball);
   var newDistance = this.distanceCheck(newBall);
-
-  debugger;
 
   return (origDistance.distance < newDistance.distance);
 

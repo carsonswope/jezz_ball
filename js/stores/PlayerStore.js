@@ -68,12 +68,14 @@ PlayerStore.attemptMove = function() {
 
   var boardSegments = BoardStore.beingCreatedSegments();
 
-  if (!boardSegments.length) {
+  if (!boardSegments.length && BoardStore.cell(xCoord, yCoord) === 'NONE') {
 
     BoardStore.setNewSegments( [
       new Segment(
-        {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
-        {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
+        {x: xCoord, y: yCoord},
+        {x: xCoord, y: yCoord},
+        // {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
+        // {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
         directions[0],
         'UP'
       ),

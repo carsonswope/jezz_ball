@@ -12,6 +12,9 @@ var _solidSegments = [];
 var _beingCreatedSegments = [];
 var _rectangles = [];
 var _context;
+var _cells = {};
+var _blockedOff = 0;
+var _total = 1;
 
 var _horizontalDivisions = 0;
 var _verticalDivisions = 0;
@@ -38,31 +41,36 @@ BoardStore.solidSegments = function() {
 
 BoardStore.solidifySegments = function(segs) {
 
-  debugger;
+
+  var newSolidSegs = []
 
   if (segs.length === 2) {
-
-    var seg1 = _beingCreatedSegments.pop();
-    var seg2 = _beingCreatedSegments.pop();
-
-    // seg1.tick(15);
-    // seg2.tick(15);
-
-    _solidSegments.push(seg1)
-    _solidSegments.push(seg2)
+    newSolidSegs.push( _beingCreatedSegments.pop());
+    newSolidSegs.push(_beingCreatedSegments.pop());
   } else if (segs[0] === 1) {
-
-    var seg = _beingCreatedSegments.pop();
-
-    _solidSegments.push(seg)
+    newSolidSegs.push(_beingCreatedSegments.pop());
   } else {
-
-    var seg = _beingCreatedSegments.shift();
-
-
-    _solidSegments.push(seg)
-
+    newSolidSegs.push(_beingCreatedSegments.shift());
   }
+
+  newSolidSegs.forEach(function(solidSeg){
+    solidSeg.allCoordinates().forEach(function(coord){
+      if (_cells[coord.x][coord.y] === 'NONE'){
+        _cells[coord.x][coord.y] = 'WALL';
+        _blockedOff += 1;
+      }
+    });
+
+  });
+
+  _solidSegments = _solidSegments.concat(newSolidSegs);
+}
+
+BoardStore.cell = function(x,y) {
+
+  debugger;
+
+  return _cells[x][y];
 }
 
 BoardStore.removeSegments = function(segs) {
@@ -109,6 +117,15 @@ BoardStore.reset = function() {
   var h = _verticalDivisions;
   var w = _horizontalDivisions;
 
+  for (var i = 0; i <= _horizontalDivisions; i++) {
+    _cells[i] = {};
+
+    for (var j = 0; j <= _verticalDivisions; j++) {
+
+      _cells[i][j] = 'NONE';
+    }
+  }
+
   _solidSegments = [
     new Segment({x: 0,   y: 0}, {x: 0,   y: h}),
     new Segment({x: 1,   y: h}, {x: w-1, y: h}),
@@ -116,6 +133,28 @@ BoardStore.reset = function() {
     new Segment({x: w-1, y: 0}, {x: 1,   y: 0})
   ];
 
+  _solidSegments.forEach(function(segment){
+    segment.allCoordinates().forEach(function(coord){
+
+      if (_cells[coord.x][coord.y] === 'NONE' ){
+        _cells[coord.x][coord.y] = 'WALL';
+        _blockedOff += 1;
+      }
+
+    });
+  });
+
+  _total = (_horizontalDivisions * _verticalDivisions) - _blockedOff;
+  _blockedOff = 0;
+
+};
+
+BoardStore.percentageFinished = function() {
+  return _blockedOff / _total;
+};
+
+BoardStore.percentageFinishedString = function() {
+  return (BoardStore.percentageFinished() * 100).toString().slice(0,3) + '%';
 };
 
 BoardStore.setContext = function(context) {

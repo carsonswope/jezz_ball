@@ -142,7 +142,8 @@ GameStore.checkForCollisions = function() {
         posY: endPosY
       });
 
-      if (dist.distance < GameConstants.LINE_WIDTH / 2) {
+      if (dist.distance < GameConstants.LINE_WIDTH / 2 &&
+          toSolidify.indexOf(j) === -1) {
 
         seg.endCoord.x = Math.round(endCoordX);
         seg.endCoord.y = Math.round(endCoordY);

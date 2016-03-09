@@ -90,6 +90,8 @@ var Game = React.createClass({
       // Actions.tick();
     }
 
+    this.forceUpdate();
+
   },
 
   render: function() {
@@ -100,6 +102,9 @@ var Game = React.createClass({
           onMouseMove={this.handleMouseMove}
           onClick={this.handleClick}>
         </canvas>
+        <div>
+          Percentage Cleared: {BoardStore.percentageFinishedString()}
+        </div>
 
       </div>
     );

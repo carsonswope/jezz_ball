@@ -13,7 +13,7 @@ exports.NEW_WALL_SPEED = 0.04;
 exports.BALL_SPEED = 0.5;
 exports.PERCENTAGE_TO_WIN = 75;
 
-exports.SOLID_SEGMENT_COLOR = 'black';
+exports.SOLID_SEGMENT_COLOR = 'rgba(0,0,10,0.5)';
 exports.DOWN_COLOR = 'rgba(0,0,200,0.5)';
 exports.UP_COLOR = 'rgba(200,0,0,0.5)';
 
