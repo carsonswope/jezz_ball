@@ -153,6 +153,8 @@ BoardStore.reset = function() {
   _horizontalDivisions = Math.floor(GameConstants.CANVAS_WIDTH /  GameConstants.LINE_WIDTH) - 1;
   _verticalDivisions = Math.floor(GameConstants.CANVAS_HEIGHT / GameConstants.LINE_WIDTH) - 1;
 
+  _beingCreatedSegments = [];
+
   var h = _verticalDivisions;
   var w = _horizontalDivisions;
 

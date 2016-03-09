@@ -30,7 +30,8 @@ var Game = React.createClass({
     Actions.setContext(this.canvasContext);
     document.addEventListener('keydown', this.handleKey, false);
     this.gameListener = GameStore.addListener(this.gameChange);
-    // Actions.startGame();
+    BoardStore.reset();
+    Actions.tick();
 
   },
 
@@ -72,7 +73,7 @@ var Game = React.createClass({
         Actions.tick();
         break;
       case 'DEAD':
-
+        Actions.tick();
         break;
       case 'WAITING':
         Actions.tick();
@@ -102,16 +103,6 @@ var Game = React.createClass({
           onMouseMove={this.handleMouseMove}
           onClick={this.handleClick}>
         </canvas>
-        <div>
-          Level: {GameStore.level()}<br />
-          Lives: {GameStore.lives()}<br />
-          Percentage Cleared: {BoardStore.percentageFinishedString()}<br />
-          Status: {GameStore.status()}
-          <div onClick={this.startGame}>
-            startgame
-          </div>
-          Score: {GameStore.score()}
-        </div>
 
       </div>
     );

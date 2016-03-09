@@ -5,7 +5,6 @@ var GameConstants = require('../constants/GameConstants');
 var Actions = require('../actions/Actions');
 
 var Segment = require('../util/Segment');
-
 var BoardStore = require('../stores/BoardStore');
 
 var Ball = require('../util/Ball');
@@ -55,7 +54,7 @@ PlayerStore.switchPlayerDirection = function() {
 
   _direction = _direction === 'VERTICAL' ?
     'HORIZONTAL' : 'VERTICAL';
-}
+};
 
 PlayerStore.attemptMove = function() {
 
@@ -94,7 +93,6 @@ PlayerStore.attemptMove = function() {
     ]);
 
   }
-
 }
 
 PlayerStore.__onDispatch = function(payload) {
@@ -108,9 +106,9 @@ PlayerStore.__onDispatch = function(payload) {
     case GameConstants.actions.SWITCH_PLAYER_DIRECTION:
       PlayerStore.switchPlayerDirection();
       break;
-    case GameConstants.actions.ATTEMPT_MOVE:
-      PlayerStore.attemptMove();
-      break;
+    // case GameConstants.actions.ATTEMPT_MOVE:
+    //   PlayerStore.attemptMove();
+    //   break;
   }
 
 
