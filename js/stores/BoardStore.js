@@ -2,6 +2,7 @@ var AppDispatcher = require('../dispatcher/Dispatcher');
 var Store = require('flux/utils').Store;
 
 var GameConstants = require('../constants/GameConstants');
+var BallStore = require('../stores/BallStore');
 
 var Segment = require('../util/Segment');
 
@@ -41,34 +42,64 @@ BoardStore.solidSegments = function() {
 
 BoardStore.solidifySegments = function(segs) {
 
-
+  var seg;
   var newSolidSegs = []
 
   if (segs.length === 2) {
-    newSolidSegs.push( _beingCreatedSegments.pop());
-    newSolidSegs.push(_beingCreatedSegments.pop());
-  } else if (segs[0] === 1) {
-    newSolidSegs.push(_beingCreatedSegments.pop());
+    // newSolidSegs.push( _beingCreatedSegments.pop());
+    // newSolidSegs.push(_beingCreatedSegments.pop());
+    seg = new Segment(
+            _beingCreatedSegments.pop().endCoord,
+            _beingCreatedSegments.pop().endCoord,
+            null,
+            'SOLID'
+          )
+
+    BoardStore.checkForAutoFill(seg);
+
+    _solidSegments.push(
+      seg
+    );
+
   } else {
-    newSolidSegs.push(_beingCreatedSegments.shift());
+
+    if (segs[0] === 1) {
+      seg = _beingCreatedSegments.pop();
+    } else {
+      seg = _beingCreatedSegments.shift();
+    }
+
+    if (_solidSegments[_solidSegments.length - 1].moveTag === seg.moveTag) {
+
+      var newSeg = new Segment(
+        seg.endCoord,
+        _solidSegments.pop().endCoord,
+        null,
+        'SOLID'
+      )
+
+      BoardStore.checkForAutoFill(newSeg);
+
+      _solidSegments.push(newSeg);
+
+    } else {
+
+      seg.segmentType = 'SOLID';
+      _solidSegments.push(seg);
+
+    }
   }
 
-  newSolidSegs.forEach(function(solidSeg){
-    solidSeg.allCoordinates().forEach(function(coord){
-      if (_cells[coord.x][coord.y] === 'NONE'){
-        _cells[coord.x][coord.y] = 'WALL';
-        _blockedOff += 1;
-      }
-    });
-
+  seg.allCoordinates().forEach(function(coord){
+    if (_cells[coord.x][coord.y] === 'NONE'){
+      _cells[coord.x][coord.y] = 'WALL';
+      _blockedOff += 1;
+    }
   });
 
-  _solidSegments = _solidSegments.concat(newSolidSegs);
 }
 
 BoardStore.cell = function(x,y) {
-
-  debugger;
 
   return _cells[x][y];
 }
@@ -148,6 +179,76 @@ BoardStore.reset = function() {
   _blockedOff = 0;
 
 };
+
+BoardStore.checkForAutoFill = function(segment) {
+
+  var areas;
+  var segCoords = segment.allCoordinates();
+
+  if (segment.startCoord.x === segment.endCoord.x){
+    //segment is vertical
+    areas = [
+      segCoords.map(function(coord){
+        return {
+          x: coord.x + 1,
+          y: coord.y
+        }
+      }),
+
+      segCoords.map(function(coord){
+        return {
+          x: coord.x - 1,
+          y: coord.y
+        }
+      })
+    ];
+
+  } else {
+    //segment is horizontal
+    areas = [
+      segCoords.map(function(coord){
+        return {
+          x: coord.x,
+          y: coord.y + 1
+        }
+      }),
+
+      segCoords.map(function(coord){
+        return {
+          x: coord.x,
+          y: coord.y - 1
+        }
+      })
+    ];
+
+  }
+
+  var ballPositions = {}
+  var gridPos;
+
+  BallStore.balls().forEach(function(ball){
+    gridPos = {
+      x: Math.round((ball.posX - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH),
+      y: Math.round((ball.posY - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH)
+    }
+
+    if (!ballPositions[gridPos.x]) { ballPositions[gridPos.x] = {}; }
+    ballPositions[gridPos.x][gridPos.y] = 'BALL';
+  });
+
+  ballPositions
+  areas
+  _cells
+
+};
+
+BoardStore.isBallThere = function(positions, position) {
+
+  return (positions[position.x] &&
+          positions[position.y] === 'BALL');
+
+};
+
 
 BoardStore.percentageFinished = function() {
   return _blockedOff / _total;

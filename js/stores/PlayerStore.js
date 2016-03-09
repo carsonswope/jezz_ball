@@ -14,6 +14,7 @@ var PlayerStore = new Store(AppDispatcher);
 
 var _direction = 'VERTICAL';
 var _context;
+var _moveTag = 0;
 
 var _position = {
   xPos: 50,
@@ -58,6 +59,8 @@ PlayerStore.switchPlayerDirection = function() {
 
 PlayerStore.attemptMove = function() {
 
+  _moveTag += 1;
+
   var d = GameConstants.NEW_WALL_SPEED;
   var directions = _direction === 'VERTICAL' ?
     [{dX: 0, dY: 1}, {dX:  0, dY: -1}] :
@@ -72,19 +75,21 @@ PlayerStore.attemptMove = function() {
 
     BoardStore.setNewSegments( [
       new Segment(
-        {x: xCoord, y: yCoord},
-        {x: xCoord, y: yCoord},
-        // {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
-        // {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
+        // {x: xCoord, y: yCoord},
+        // {x: xCoord, y: yCoord},
+        {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
+        {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
         directions[0],
-        'UP'
+        'UP',
+        _moveTag
       ),
 
       new Segment(
         {x: xCoord, y: yCoord},
         {x: xCoord, y: yCoord},
         directions[1],
-        'DOWN'
+        'DOWN',
+        _moveTag
       )
     ]);
 

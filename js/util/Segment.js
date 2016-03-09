@@ -4,12 +4,13 @@ var Ball = require('../util/Ball');
 
 var MathUtil = require('../util/MathUtil')
 
-function Segment(startCoord, endCoord, direction, segmentType){
+function Segment(startCoord, endCoord, direction, segmentType, moveTag){
 
   this.startCoord = startCoord;
   this.endCoord = endCoord;
   this.direction = direction;
   this.segmentType = segmentType || 'SOLID';
+  this.moveTag = moveTag;
 
 };
 
@@ -70,10 +71,7 @@ Segment.prototype.draw = function(ctx){
 
 Segment.prototype.allCoordinates = function() {
 
-  this.startCoord
-  this.endCoord
-
-  var coords = []
+  var coords = [];
 
   if (this.startCoord.x === this.endCoord.x) {
     //horizontal line

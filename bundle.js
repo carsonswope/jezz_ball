@@ -50,11 +50,11 @@
 	var ReactDOM = __webpack_require__(158);
 
 	var BoardStore = __webpack_require__(159);
-	var GameStore = __webpack_require__(182);
+	var GameStore = __webpack_require__(160);
 	var BallStore = __webpack_require__(183);
 	var Actions = __webpack_require__(186);
 
-	var Game = __webpack_require__(181);
+	var Game = __webpack_require__(189);
 
 	window.BoardStore = BoardStore;
 	window.BallStore = BallStore;
@@ -19673,12 +19673,13 @@
 
 	'use strict';
 
-	var AppDispatcher = __webpack_require__(160);
-	var Store = __webpack_require__(164).Store;
+	var AppDispatcher = __webpack_require__(161);
+	var Store = __webpack_require__(165).Store;
 
-	var GameConstants = __webpack_require__(184);
+	var GameConstants = __webpack_require__(182);
+	var BallStore = __webpack_require__(183);
 
-	var Segment = __webpack_require__(185);
+	var Segment = __webpack_require__(187);
 
 	var BoardStore = new Store(AppDispatcher);
 
@@ -19714,32 +19715,48 @@
 
 	BoardStore.solidifySegments = function (segs) {
 
+	  var seg;
 	  var newSolidSegs = [];
 
 	  if (segs.length === 2) {
-	    newSolidSegs.push(_beingCreatedSegments.pop());
-	    newSolidSegs.push(_beingCreatedSegments.pop());
-	  } else if (segs[0] === 1) {
-	    newSolidSegs.push(_beingCreatedSegments.pop());
+	    // newSolidSegs.push( _beingCreatedSegments.pop());
+	    // newSolidSegs.push(_beingCreatedSegments.pop());
+	    seg = new Segment(_beingCreatedSegments.pop().endCoord, _beingCreatedSegments.pop().endCoord, null, 'SOLID');
+
+	    BoardStore.checkForAutoFill(seg);
+
+	    _solidSegments.push(seg);
 	  } else {
-	    newSolidSegs.push(_beingCreatedSegments.shift());
+
+	    if (segs[0] === 1) {
+	      seg = _beingCreatedSegments.pop();
+	    } else {
+	      seg = _beingCreatedSegments.shift();
+	    }
+
+	    if (_solidSegments[_solidSegments.length - 1].moveTag === seg.moveTag) {
+
+	      var newSeg = new Segment(seg.endCoord, _solidSegments.pop().endCoord, null, 'SOLID');
+
+	      BoardStore.checkForAutoFill(newSeg);
+
+	      _solidSegments.push(newSeg);
+	    } else {
+
+	      seg.segmentType = 'SOLID';
+	      _solidSegments.push(seg);
+	    }
 	  }
 
-	  newSolidSegs.forEach(function (solidSeg) {
-	    solidSeg.allCoordinates().forEach(function (coord) {
-	      if (_cells[coord.x][coord.y] === 'NONE') {
-	        _cells[coord.x][coord.y] = 'WALL';
-	        _blockedOff += 1;
-	      }
-	    });
+	  seg.allCoordinates().forEach(function (coord) {
+	    if (_cells[coord.x][coord.y] === 'NONE') {
+	      _cells[coord.x][coord.y] = 'WALL';
+	      _blockedOff += 1;
+	    }
 	  });
-
-	  _solidSegments = _solidSegments.concat(newSolidSegs);
 	};
 
 	BoardStore.cell = function (x, y) {
-
-	  debugger;
 
 	  return _cells[x][y];
 	};
@@ -19810,6 +19827,64 @@
 	  _blockedOff = 0;
 	};
 
+	BoardStore.checkForAutoFill = function (segment) {
+
+	  var areas;
+	  var segCoords = segment.allCoordinates();
+
+	  if (segment.startCoord.x === segment.endCoord.x) {
+	    //segment is vertical
+	    areas = [segCoords.map(function (coord) {
+	      return {
+	        x: coord.x + 1,
+	        y: coord.y
+	      };
+	    }), segCoords.map(function (coord) {
+	      return {
+	        x: coord.x - 1,
+	        y: coord.y
+	      };
+	    })];
+	  } else {
+	    //segment is horizontal
+	    areas = [segCoords.map(function (coord) {
+	      return {
+	        x: coord.x,
+	        y: coord.y + 1
+	      };
+	    }), segCoords.map(function (coord) {
+	      return {
+	        x: coord.x,
+	        y: coord.y - 1
+	      };
+	    })];
+	  }
+
+	  var ballPositions = {};
+	  var gridPos;
+
+	  BallStore.balls().forEach(function (ball) {
+	    gridPos = {
+	      x: Math.round((ball.posX - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH),
+	      y: Math.round((ball.posY - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH)
+	    };
+
+	    if (!ballPositions[gridPos.x]) {
+	      ballPositions[gridPos.x] = {};
+	    }
+	    ballPositions[gridPos.x][gridPos.y] = 'BALL';
+	  });
+
+	  ballPositions;
+	  areas;
+	  _cells;
+	};
+
+	BoardStore.isBallThere = function (positions, position) {
+
+	  return positions[position.x] && positions[position.y] === 'BALL';
+	};
+
 	BoardStore.percentageFinished = function () {
 	  return _blockedOff / _total;
 	};
@@ -19838,11 +19913,200 @@
 
 	'use strict';
 
-	var Dispatcher = __webpack_require__(161).Dispatcher;
-	module.exports = new Dispatcher();
+	var AppDispatcher = __webpack_require__(161);
+	var Store = __webpack_require__(165).Store;
+
+	var GameConstants = __webpack_require__(182);
+	var BoardStore = __webpack_require__(159);
+	var BallStore = __webpack_require__(183);
+	var PlayerStore = __webpack_require__(185);
+
+	var MathUtil = __webpack_require__(188);
+
+	var GameStore = new Store(AppDispatcher);
+
+	var _lives = 10;
+	var _level = 1;
+	var _time = 0;
+	var _status = 'WAITING';
+	var _context;
+
+	GameStore.status = function () {
+	  return _status;
+	};
+
+	GameStore.finishGame = function () {
+	  _status = 'DEAD';
+	  GameStore.__emitChange();
+	};
+
+	GameStore.finishLevel = function () {
+	  _status = 'WAITING';
+	  _level += 1;
+	  _lives = _level + 1;
+
+	  GameStore.__emitChange();
+	};
+
+	GameStore.startLevel = function () {
+
+	  BoardStore.reset();
+	  BallStore.reset(_lives);
+	  _status = 'PLAYING';
+	  GameStore.__emitChange();
+	};
+
+	GameStore.startGame = function () {
+
+	  _lives = 10;
+	  _level = 1;
+
+	  GameStore.startLevel();
+	};
+
+	GameStore.tick = function (newTime) {
+
+	  var dT = newTime - _time;
+	  _time = newTime;
+
+	  BoardStore.tick(dT);
+	  BallStore.tick(dT);
+
+	  GameStore.checkForCollisions();
+
+	  GameStore.draw();
+
+	  GameStore.__emitChange();
+	};
+
+	GameStore.checkForCollisions = function () {
+
+	  var solidSegs = BoardStore.solidSegments();
+	  var beingMadeSegs = BoardStore.beingCreatedSegments();
+	  var balls = BallStore.balls();
+	  var dist;
+	  var toBounce;
+
+	  var minDist = GameConstants.BALL_RADIUS + 2;
+
+	  for (var j = 0; j < balls.length; j++) {
+
+	    toBounce = [];
+	    for (var i = 0; i < solidSegs.length; i++) {
+
+	      dist = solidSegs[i].distanceCheck(balls[j]);
+
+	      if (dist.distance < minDist && toBounce.indexOf(dist.line) === -1 && solidSegs[i].acceptableBounce(balls[j], dist.line)) {
+	        toBounce.push(dist.line);
+	      }
+	    }
+
+	    toBounce.forEach(function (line) {
+	      balls[j].bounce(line);
+	    });
+	  }
+
+	  var toRemove = [];
+
+	  for (var i = 0; i < beingMadeSegs.length; i++) {
+
+	    seg = beingMadeSegs[i];
+
+	    for (var j = 0; j < balls.length; j++) {
+
+	      dist = seg.distanceCheck(balls[j]);
+
+	      if (dist.distance < GameConstants.BALL_RADIUS && toRemove.indexOf(i) === -1) {
+
+	        toRemove.push(i);
+	      }
+	    }
+	  }
+
+	  if (toRemove.length) {
+	    BoardStore.removeSegments(toRemove);
+	  }
+
+	  var solidSegs = BoardStore.solidSegments();
+	  var beingMadeSegs = BoardStore.beingCreatedSegments();
+	  var balls = BallStore.balls();
+
+	  var seg;
+	  var toSolidify = [];
+
+	  for (var i = 0; i < solidSegs.length; i++) {
+	    for (var j = 0; j < beingMadeSegs.length; j++) {
+
+	      seg = beingMadeSegs[j];
+
+	      var endCoordX = seg.endCoord.x; // + (seg.direction.dX * 0.5);
+	      var endCoordY = seg.endCoord.y; // + (seg.direction.dY * 0.5);
+
+	      var endPosX = (endCoordX + 0.5) * GameConstants.LINE_WIDTH;
+	      var endPosY = (endCoordY + 0.5) * GameConstants.LINE_WIDTH;
+
+	      dist = solidSegs[i].distanceCheck({
+	        posX: endPosX,
+	        posY: endPosY
+	      });
+
+	      if (dist.distance < GameConstants.LINE_WIDTH / 2 && toSolidify.indexOf(j) === -1) {
+
+	        seg.endCoord.x = Math.round(endCoordX);
+	        seg.endCoord.y = Math.round(endCoordY);
+
+	        toSolidify.push(j);
+	      }
+	    }
+	  }
+
+	  if (toSolidify.length) {
+	    BoardStore.solidifySegments(toSolidify);
+	  }
+	};
+
+	GameStore.draw = function () {
+
+	  _context.clearRect(0, 0, GameConstants.CANVAS_WIDTH, GameConstants.CANVAS_HEIGHT);
+
+	  BallStore.draw();
+	  BoardStore.draw();
+	  PlayerStore.draw();
+	};
+
+	GameStore.setContext = function (ctx) {
+
+	  _context = ctx;
+	};
+
+	GameStore.__onDispatch = function (payload) {
+	  switch (payload.actionType) {
+	    case GameConstants.actions.TICK:
+	      GameStore.tick(payload.time);
+	      break;
+	    case GameConstants.actions.START_GAME:
+	      GameStore.startLevel();
+	      break;
+	    case GameConstants.actions.SET_CONTEXT:
+	      GameStore.setContext(payload.context);
+	      break;
+
+	  }
+	};
+
+	module.exports = GameStore;
 
 /***/ },
 /* 161 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var Dispatcher = __webpack_require__(162).Dispatcher;
+	module.exports = new Dispatcher();
+
+/***/ },
+/* 162 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -19854,11 +20118,11 @@
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 */
 
-	module.exports.Dispatcher = __webpack_require__(162);
+	module.exports.Dispatcher = __webpack_require__(163);
 
 
 /***/ },
-/* 162 */
+/* 163 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -19880,7 +20144,7 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-	var invariant = __webpack_require__(163);
+	var invariant = __webpack_require__(164);
 
 	var _prefix = 'ID_';
 
@@ -20095,7 +20359,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 163 */
+/* 164 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -20150,7 +20414,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 164 */
+/* 165 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -20162,15 +20426,15 @@
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 */
 
-	module.exports.Container = __webpack_require__(165);
-	module.exports.MapStore = __webpack_require__(168);
-	module.exports.Mixin = __webpack_require__(180);
-	module.exports.ReduceStore = __webpack_require__(169);
-	module.exports.Store = __webpack_require__(170);
+	module.exports.Container = __webpack_require__(166);
+	module.exports.MapStore = __webpack_require__(169);
+	module.exports.Mixin = __webpack_require__(181);
+	module.exports.ReduceStore = __webpack_require__(170);
+	module.exports.Store = __webpack_require__(171);
 
 
 /***/ },
-/* 165 */
+/* 166 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -20192,10 +20456,10 @@
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-	var FluxStoreGroup = __webpack_require__(166);
+	var FluxStoreGroup = __webpack_require__(167);
 
-	var invariant = __webpack_require__(163);
-	var shallowEqual = __webpack_require__(167);
+	var invariant = __webpack_require__(164);
+	var shallowEqual = __webpack_require__(168);
 
 	var DEFAULT_OPTIONS = {
 	  pure: true,
@@ -20353,7 +20617,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 166 */
+/* 167 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -20372,7 +20636,7 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-	var invariant = __webpack_require__(163);
+	var invariant = __webpack_require__(164);
 
 	/**
 	 * FluxStoreGroup allows you to execute a callback on every dispatch after
@@ -20434,7 +20698,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 167 */
+/* 168 */
 /***/ function(module, exports) {
 
 	/**
@@ -20489,7 +20753,7 @@
 	module.exports = shallowEqual;
 
 /***/ },
-/* 168 */
+/* 169 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -20510,10 +20774,10 @@
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-	var FluxReduceStore = __webpack_require__(169);
-	var Immutable = __webpack_require__(179);
+	var FluxReduceStore = __webpack_require__(170);
+	var Immutable = __webpack_require__(180);
 
-	var invariant = __webpack_require__(163);
+	var invariant = __webpack_require__(164);
 
 	/**
 	 * This is a simple store. It allows caching key value pairs. An implementation
@@ -20639,7 +20903,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 169 */
+/* 170 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -20660,10 +20924,10 @@
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-	var FluxStore = __webpack_require__(170);
+	var FluxStore = __webpack_require__(171);
 
-	var abstractMethod = __webpack_require__(178);
-	var invariant = __webpack_require__(163);
+	var abstractMethod = __webpack_require__(179);
+	var invariant = __webpack_require__(164);
 
 	var FluxReduceStore = (function (_FluxStore) {
 	  _inherits(FluxReduceStore, _FluxStore);
@@ -20746,7 +21010,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 170 */
+/* 171 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -20765,11 +21029,11 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-	var _require = __webpack_require__(171);
+	var _require = __webpack_require__(172);
 
 	var EventEmitter = _require.EventEmitter;
 
-	var invariant = __webpack_require__(163);
+	var invariant = __webpack_require__(164);
 
 	/**
 	 * This class should be extended by the stores in your application, like so:
@@ -20929,7 +21193,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 171 */
+/* 172 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -20942,14 +21206,14 @@
 	 */
 
 	var fbemitter = {
-	  EventEmitter: __webpack_require__(172)
+	  EventEmitter: __webpack_require__(173)
 	};
 
 	module.exports = fbemitter;
 
 
 /***/ },
-/* 172 */
+/* 173 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -20968,11 +21232,11 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-	var EmitterSubscription = __webpack_require__(173);
-	var EventSubscriptionVendor = __webpack_require__(175);
+	var EmitterSubscription = __webpack_require__(174);
+	var EventSubscriptionVendor = __webpack_require__(176);
 
-	var emptyFunction = __webpack_require__(177);
-	var invariant = __webpack_require__(176);
+	var emptyFunction = __webpack_require__(178);
+	var invariant = __webpack_require__(177);
 
 	/**
 	 * @class BaseEventEmitter
@@ -21146,7 +21410,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 173 */
+/* 174 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -21167,7 +21431,7 @@
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-	var EventSubscription = __webpack_require__(174);
+	var EventSubscription = __webpack_require__(175);
 
 	/**
 	 * EmitterSubscription represents a subscription with listener and context data.
@@ -21199,7 +21463,7 @@
 	module.exports = EmitterSubscription;
 
 /***/ },
-/* 174 */
+/* 175 */
 /***/ function(module, exports) {
 
 	/**
@@ -21253,7 +21517,7 @@
 	module.exports = EventSubscription;
 
 /***/ },
-/* 175 */
+/* 176 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -21272,7 +21536,7 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-	var invariant = __webpack_require__(176);
+	var invariant = __webpack_require__(177);
 
 	/**
 	 * EventSubscriptionVendor stores a set of EventSubscriptions that are
@@ -21362,7 +21626,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 176 */
+/* 177 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -21417,7 +21681,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 177 */
+/* 178 */
 /***/ function(module, exports) {
 
 	/**
@@ -21459,7 +21723,7 @@
 	module.exports = emptyFunction;
 
 /***/ },
-/* 178 */
+/* 179 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -21476,7 +21740,7 @@
 
 	'use strict';
 
-	var invariant = __webpack_require__(163);
+	var invariant = __webpack_require__(164);
 
 	function abstractMethod(className, methodName) {
 	   true ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Subclasses of %s must override %s() with their own implementation.', className, methodName) : invariant(false) : undefined;
@@ -21486,7 +21750,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 179 */
+/* 180 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -26473,7 +26737,7 @@
 	}));
 
 /***/ },
-/* 180 */
+/* 181 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -26490,9 +26754,9 @@
 
 	'use strict';
 
-	var FluxStoreGroup = __webpack_require__(166);
+	var FluxStoreGroup = __webpack_require__(167);
 
-	var invariant = __webpack_require__(163);
+	var invariant = __webpack_require__(164);
 
 	/**
 	 * `FluxContainer` should be preferred over this mixin, but it requires using
@@ -26596,313 +26860,44 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 181 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var React = __webpack_require__(1);
-	var PropTypes = React.PropTypes;
-
-	var AppDispatcher = __webpack_require__(160);
-
-	var Actions = __webpack_require__(186);
-
-	var BoardStore = __webpack_require__(159);
-	var GameStore = __webpack_require__(182);
-	var BallStore = __webpack_require__(183);
-
-	var GameConstants = __webpack_require__(184);
-
-	var Game = React.createClass({
-	  displayName: 'Game',
-
-
-	  getInitialState: function getInitialState() {
-
-	    return {
-	      gameStatus: GameStore.status()
-	    };
-	  },
-
-	  componentDidMount: function componentDidMount() {
-
-	    this.canvas = this.refs.gameCanvas;
-
-	    this.canvas.width = GameConstants.CANVAS_WIDTH;
-	    this.canvas.height = GameConstants.CANVAS_HEIGHT;
-
-	    this.canvasContext = this.canvas.getContext('2d');
-
-	    Actions.setContext(this.canvasContext);
-
-	    document.addEventListener('keydown', this.handleKey, false);
-
-	    this.gameListener = GameStore.addListener(this.gameChange);
-
-	    Actions.startGame();
-	  },
-
-	  componentWillUnmount: function componentWillUnmount() {
-	    document.removeEventListener('keydown', this.handleKey);
-	    this.gameListener.remove();
-	  },
-
-	  handleClick: function handleClick(e) {
-	    e.preventDefault();
-
-	    AppDispatcher.dispatch({
-	      actionType: GameConstants.actions.ATTEMPT_MOVE
-	    });
-	  },
-
-	  handleKey: function handleKey(e) {
-
-	    if (e.keyCode === 32) {
-
-	      Actions.switchPlayerDirection();
-	    };
-	  },
-
-	  handleMouseMove: function handleMouseMove(e) {
-
-	    var xPos = e.clientX;
-	    var yPos = e.clientY;
-
-	    Actions.setPlayerPosition(xPos, yPos);
-	  },
-
-	  gameChange: function gameChange() {
-	    var gameStatus = GameStore.status();
-
-	    switch (gameStatus) {
-	      case 'PLAYING':
-	        Actions.tick();
-	        break;
-	      case 'DEAD':
-
-	        break;
-	      case 'WAITING':
-
-	        break;
-
-	    }
-
-	    if (gameStatus === 'PLAYING') {
-	      // Actions.tick();
-	    }
-
-	    this.forceUpdate();
-	  },
-
-	  render: function render() {
-	    return React.createElement(
-	      'div',
-	      { onKeyDown: this.handleKey },
-	      React.createElement('canvas', { id: 'game-canvas', ref: 'gameCanvas',
-	        onMouseMove: this.handleMouseMove,
-	        onClick: this.handleClick }),
-	      React.createElement(
-	        'div',
-	        null,
-	        'Percentage Cleared: ',
-	        BoardStore.percentageFinishedString()
-	      )
-	    );
-	  }
-
-	});
-
-	module.exports = Game;
-
-/***/ },
 /* 182 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ function(module, exports) {
 
 	'use strict';
 
-	var AppDispatcher = __webpack_require__(160);
-	var Store = __webpack_require__(164).Store;
+	//
+	// this.canvas.width = GameConstants.CANVAS_WIDTH;
+	// this.canvas.height = GameConstants.CANVAS_HEIGHT;
+	//
+	// this.canvasContext = this.canvas.getContext('2d');
 
-	var GameConstants = __webpack_require__(184);
-	var BoardStore = __webpack_require__(159);
-	var BallStore = __webpack_require__(183);
-	var PlayerStore = __webpack_require__(189);
+	exports.CANVAS_WIDTH = 1000;
+	exports.CANVAS_HEIGHT = 600;
 
-	var MathUtil = __webpack_require__(188);
+	exports.NEW_WALL_SPEED = 0.04;
+	exports.BALL_SPEED = 0.5;
+	exports.PERCENTAGE_TO_WIN = 75;
 
-	var GameStore = new Store(AppDispatcher);
+	exports.SOLID_SEGMENT_COLOR = 'rgba(0,0,10,0.5)';
+	exports.DOWN_COLOR = 'rgba(0,0,200,0.5)';
+	exports.UP_COLOR = 'rgba(200,0,0,0.5)';
 
-	var _lives = 10;
-	var _level = 1;
-	var _time = 0;
-	var _status = 'WAITING';
-	var _context;
+	exports.BALL_OUTLINE_COLOR = 'green';
+	exports.BALL_INSIDE_COLOR = 'yellow';
 
-	GameStore.status = function () {
-	  return _status;
+	exports.BALL_RADIUS = 8;
+	exports.BALL_BORDER_WIDTH = 0;
+
+	exports.LINE_WIDTH = 10;
+
+	exports.actions = {
+	  TICK: 'TICK',
+	  SET_CONTEXT: 'SET_CONTEXT',
+	  START_GAME: 'START_GAME',
+	  SWITCH_PLAYER_DIRECTION: 'SWITCH_PLAYER_DIRECTION',
+	  ATTEMPT_MOVE: 'ATTEMPT_MOVE',
+	  SET_PLAYER_POSITION: 'SET_PLAYER_POSITION'
 	};
-
-	GameStore.finishGame = function () {
-	  _status = 'DEAD';
-	  GameStore.__emitChange();
-	};
-
-	GameStore.finishLevel = function () {
-	  _status = 'WAITING';
-	  _level += 1;
-	  _lives = _level + 1;
-
-	  GameStore.__emitChange();
-	};
-
-	GameStore.startLevel = function () {
-
-	  BoardStore.reset();
-	  BallStore.reset(_lives);
-	  _status = 'PLAYING';
-	  GameStore.__emitChange();
-	};
-
-	GameStore.startGame = function () {
-
-	  _lives = 10;
-	  _level = 1;
-
-	  GameStore.startLevel();
-	};
-
-	GameStore.tick = function (newTime) {
-
-	  var dT = newTime - _time;
-	  _time = newTime;
-
-	  BoardStore.tick(dT);
-	  BallStore.tick(dT);
-
-	  GameStore.checkForCollisions();
-
-	  GameStore.draw();
-
-	  GameStore.__emitChange();
-	};
-
-	GameStore.checkForCollisions = function () {
-
-	  var solidSegs = BoardStore.solidSegments();
-	  var beingMadeSegs = BoardStore.beingCreatedSegments();
-	  var balls = BallStore.balls();
-	  var dist;
-	  var toBounce;
-
-	  var minDist = GameConstants.BALL_RADIUS + 2;
-
-	  for (var j = 0; j < balls.length; j++) {
-
-	    toBounce = [];
-	    for (var i = 0; i < solidSegs.length; i++) {
-
-	      dist = solidSegs[i].distanceCheck(balls[j]);
-
-	      if (dist.distance < minDist && toBounce.indexOf(dist.line) === -1 && solidSegs[i].acceptableBounce(balls[j], dist.line)) {
-	        toBounce.push(dist.line);
-	      }
-	    }
-
-	    toBounce.forEach(function (line) {
-	      balls[j].bounce(line);
-	    });
-	  }
-
-	  var toRemove = [];
-
-	  for (var i = 0; i < beingMadeSegs.length; i++) {
-
-	    seg = beingMadeSegs[i];
-
-	    for (var j = 0; j < balls.length; j++) {
-
-	      dist = seg.distanceCheck(balls[j]);
-
-	      if (dist.distance < GameConstants.BALL_RADIUS && toRemove.indexOf(i) === -1) {
-
-	        toRemove.push(i);
-	      }
-	    }
-	  }
-
-	  if (toRemove.length) {
-	    BoardStore.removeSegments(toRemove);
-	  }
-
-	  var solidSegs = BoardStore.solidSegments();
-	  var beingMadeSegs = BoardStore.beingCreatedSegments();
-	  var balls = BallStore.balls();
-
-	  var seg;
-	  var toSolidify = [];
-
-	  for (var i = 0; i < solidSegs.length; i++) {
-	    for (var j = 0; j < beingMadeSegs.length; j++) {
-
-	      seg = beingMadeSegs[j];
-
-	      var endCoordX = seg.endCoord.x; // + (seg.direction.dX * 0.5);
-	      var endCoordY = seg.endCoord.y; // + (seg.direction.dY * 0.5);
-
-	      var endPosX = (endCoordX + 0.5) * GameConstants.LINE_WIDTH;
-	      var endPosY = (endCoordY + 0.5) * GameConstants.LINE_WIDTH;
-
-	      dist = solidSegs[i].distanceCheck({
-	        posX: endPosX,
-	        posY: endPosY
-	      });
-
-	      if (dist.distance < GameConstants.LINE_WIDTH / 2 && toSolidify.indexOf(j) === -1) {
-
-	        seg.endCoord.x = Math.round(endCoordX);
-	        seg.endCoord.y = Math.round(endCoordY);
-
-	        toSolidify.push(j);
-	      }
-	    }
-	  }
-
-	  if (toSolidify.length) {
-	    BoardStore.solidifySegments(toSolidify);
-	  }
-	};
-
-	GameStore.draw = function () {
-
-	  _context.clearRect(0, 0, GameConstants.CANVAS_WIDTH, GameConstants.CANVAS_HEIGHT);
-
-	  BallStore.draw();
-	  BoardStore.draw();
-	  PlayerStore.draw();
-	};
-
-	GameStore.setContext = function (ctx) {
-
-	  _context = ctx;
-	};
-
-	GameStore.__onDispatch = function (payload) {
-	  switch (payload.actionType) {
-	    case GameConstants.actions.TICK:
-	      GameStore.tick(payload.time);
-	      break;
-	    case GameConstants.actions.START_GAME:
-	      GameStore.startLevel();
-	      break;
-	    case GameConstants.actions.SET_CONTEXT:
-	      GameStore.setContext(payload.context);
-	      break;
-
-	  }
-	};
-
-	module.exports = GameStore;
 
 /***/ },
 /* 183 */
@@ -26910,12 +26905,12 @@
 
 	'use strict';
 
-	var AppDispatcher = __webpack_require__(160);
-	var Store = __webpack_require__(164).Store;
+	var AppDispatcher = __webpack_require__(161);
+	var Store = __webpack_require__(165).Store;
 
-	var GameConstants = __webpack_require__(184);
+	var GameConstants = __webpack_require__(182);
 
-	var Ball = __webpack_require__(187);
+	var Ball = __webpack_require__(184);
 
 	var BallStore = new Store(AppDispatcher);
 
@@ -27005,43 +27000,48 @@
 
 /***/ },
 /* 184 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	//
-	// this.canvas.width = GameConstants.CANVAS_WIDTH;
-	// this.canvas.height = GameConstants.CANVAS_HEIGHT;
-	//
-	// this.canvasContext = this.canvas.getContext('2d');
+	var GameConstants = __webpack_require__(182);
 
-	exports.CANVAS_WIDTH = 1000;
-	exports.CANVAS_HEIGHT = 600;
-
-	exports.NEW_WALL_SPEED = 0.04;
-	exports.BALL_SPEED = 0.5;
-	exports.PERCENTAGE_TO_WIN = 75;
-
-	exports.SOLID_SEGMENT_COLOR = 'rgba(0,0,10,0.5)';
-	exports.DOWN_COLOR = 'rgba(0,0,200,0.5)';
-	exports.UP_COLOR = 'rgba(200,0,0,0.5)';
-
-	exports.BALL_OUTLINE_COLOR = 'green';
-	exports.BALL_INSIDE_COLOR = 'yellow';
-
-	exports.BALL_RADIUS = 8;
-	exports.BALL_BORDER_WIDTH = 0;
-
-	exports.LINE_WIDTH = 10;
-
-	exports.actions = {
-	  TICK: 'TICK',
-	  SET_CONTEXT: 'SET_CONTEXT',
-	  START_GAME: 'START_GAME',
-	  SWITCH_PLAYER_DIRECTION: 'SWITCH_PLAYER_DIRECTION',
-	  ATTEMPT_MOVE: 'ATTEMPT_MOVE',
-	  SET_PLAYER_POSITION: 'SET_PLAYER_POSITION'
+	function Ball(posX, posY, angle) {
+	  this.angle = angle;
+	  this.posX = posX;
+	  this.posY = posY;
 	};
+
+	Ball.prototype.bounce = function (lineDirection) {
+
+	  var velX = Math.sin(this.angle);
+	  var velY = Math.cos(this.angle);
+
+	  if (lineDirection === 'HORIZONTAL') {
+	    velY = -1 * velY;
+	  } else if (lineDirection === 'VERTICAL') {
+	    velX = -1 * velX;
+	  }
+
+	  this.angle = Math.atan2(velX, velY);
+	};
+
+	Ball.prototype.draw = function (ctx) {
+
+	  ctx.beginPath();
+	  ctx.fillStyle = GameConstants.BALL_INSIDE_COLOR;
+	  ctx.strokeStyle = GameConstants.BALL_OUTLINE_COLOR;
+	  ctx.lineWidth = GameConstants.BALL_BORDER_WIDTH;
+
+	  var radius = GameConstants.BALL_RADIUS - ctx.lineWidth / 2;
+
+	  ctx.arc(this.posX, this.posY, radius, 0, Math.PI * 2);
+
+	  ctx.fill();
+	  ctx.stroke();
+	};
+
+	module.exports = Ball;
 
 /***/ },
 /* 185 */
@@ -27049,18 +27049,169 @@
 
 	'use strict';
 
-	var GameConstants = __webpack_require__(184);
+	var AppDispatcher = __webpack_require__(161);
+	var Store = __webpack_require__(165).Store;
 
-	var Ball = __webpack_require__(187);
+	var GameConstants = __webpack_require__(182);
+	var Actions = __webpack_require__(186);
+
+	var Segment = __webpack_require__(187);
+
+	var BoardStore = __webpack_require__(159);
+
+	var Ball = __webpack_require__(184);
+
+	var PlayerStore = new Store(AppDispatcher);
+
+	var _direction = 'VERTICAL';
+	var _context;
+	var _moveTag = 0;
+
+	var _position = {
+	  xPos: 50,
+	  yPos: 50
+	};
+
+	PlayerStore.draw = function () {
+
+	  _context.beginPath();
+	  _context.lineWidth = 4;
+	  _context.arc(_position.xPos, _position.yPos, 5, 0, Math.PI * 2);
+	  _context.stroke();
+	  _context.beginPath();
+
+	  var lines = {
+	    HORIZONTAL: [[3, 0, 10, 0], [-3, 0, -10, 0]],
+	    VERTICAL: [[0, 3, 0, 10], [0, -3, 0, -10]]
+	  };
+
+	  lines[_direction].forEach(function (line) {
+	    _context.moveTo(_position.xPos + line[0], _position.yPos + line[1]);
+	    _context.lineTo(_position.xPos + line[2], _position.yPos + line[3]);
+	    _context.stroke();
+	  });
+	};
+
+	PlayerStore.setContext = function (ctx) {
+	  _context = ctx;
+	};
+
+	PlayerStore.setPosition = function (position) {
+
+	  _position = position;
+	};
+
+	PlayerStore.switchPlayerDirection = function () {
+
+	  _direction = _direction === 'VERTICAL' ? 'HORIZONTAL' : 'VERTICAL';
+	};
+
+	PlayerStore.attemptMove = function () {
+
+	  _moveTag += 1;
+
+	  var d = GameConstants.NEW_WALL_SPEED;
+	  var directions = _direction === 'VERTICAL' ? [{ dX: 0, dY: 1 }, { dX: 0, dY: -1 }] : [{ dX: 1, dY: 0 }, { dX: -1, dY: 0 }];
+
+	  var xCoord = Math.round((_position.xPos - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH);
+	  var yCoord = Math.round((_position.yPos - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH);
+
+	  var boardSegments = BoardStore.beingCreatedSegments();
+
+	  if (!boardSegments.length && BoardStore.cell(xCoord, yCoord) === 'NONE') {
+
+	    BoardStore.setNewSegments([new Segment(
+	    // {x: xCoord, y: yCoord},
+	    // {x: xCoord, y: yCoord},
+	    { x: xCoord + directions[0].dX, y: yCoord + directions[0].dY }, { x: xCoord + directions[0].dX, y: yCoord + directions[0].dY }, directions[0], 'UP', _moveTag), new Segment({ x: xCoord, y: yCoord }, { x: xCoord, y: yCoord }, directions[1], 'DOWN', _moveTag)]);
+	  }
+	};
+
+	PlayerStore.__onDispatch = function (payload) {
+	  switch (payload.actionType) {
+	    case GameConstants.actions.SET_CONTEXT:
+	      PlayerStore.setContext(payload.context);
+	      break;
+	    case GameConstants.actions.SET_PLAYER_POSITION:
+	      PlayerStore.setPosition(payload.position);
+	      break;
+	    case GameConstants.actions.SWITCH_PLAYER_DIRECTION:
+	      PlayerStore.switchPlayerDirection();
+	      break;
+	    case GameConstants.actions.ATTEMPT_MOVE:
+	      PlayerStore.attemptMove();
+	      break;
+	  }
+	};
+
+	module.exports = PlayerStore;
+
+/***/ },
+/* 186 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var AppDispatcher = __webpack_require__(161);
+	var GameConstants = __webpack_require__(182);
+
+	exports.setContext = function (ctx) {
+	  AppDispatcher.dispatch({
+	    actionType: GameConstants.actions.SET_CONTEXT,
+	    context: ctx
+	  });
+	};
+
+	exports.startGame = function () {
+	  AppDispatcher.dispatch({
+	    actionType: GameConstants.actions.START_GAME
+	  });
+	};
+
+	exports.tick = function () {
+	  requestAnimationFrame(function (time) {
+	    AppDispatcher.dispatch({
+	      actionType: GameConstants.actions.TICK,
+	      time: time
+	    });
+	  });
+	};
+
+	exports.setPlayerPosition = function (xPos, yPos) {
+	  AppDispatcher.dispatch({
+	    actionType: GameConstants.actions.SET_PLAYER_POSITION,
+	    position: {
+	      xPos: xPos,
+	      yPos: yPos
+	    }
+	  });
+	};
+
+	exports.switchPlayerDirection = function () {
+	  AppDispatcher.dispatch({
+	    actionType: GameConstants.actions.SWITCH_PLAYER_DIRECTION
+	  });
+	};
+
+/***/ },
+/* 187 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var GameConstants = __webpack_require__(182);
+
+	var Ball = __webpack_require__(184);
 
 	var MathUtil = __webpack_require__(188);
 
-	function Segment(startCoord, endCoord, direction, segmentType) {
+	function Segment(startCoord, endCoord, direction, segmentType, moveTag) {
 
 	  this.startCoord = startCoord;
 	  this.endCoord = endCoord;
 	  this.direction = direction;
 	  this.segmentType = segmentType || 'SOLID';
+	  this.moveTag = moveTag;
 	};
 
 	Segment.prototype.start = function () {
@@ -27112,9 +27263,6 @@
 	};
 
 	Segment.prototype.allCoordinates = function () {
-
-	  this.startCoord;
-	  this.endCoord;
 
 	  var coords = [];
 
@@ -27262,98 +27410,6 @@
 	module.exports = Segment;
 
 /***/ },
-/* 186 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var AppDispatcher = __webpack_require__(160);
-	var GameConstants = __webpack_require__(184);
-
-	exports.setContext = function (ctx) {
-	  AppDispatcher.dispatch({
-	    actionType: GameConstants.actions.SET_CONTEXT,
-	    context: ctx
-	  });
-	};
-
-	exports.startGame = function () {
-	  AppDispatcher.dispatch({
-	    actionType: GameConstants.actions.START_GAME
-	  });
-	};
-
-	exports.tick = function () {
-	  requestAnimationFrame(function (time) {
-	    AppDispatcher.dispatch({
-	      actionType: GameConstants.actions.TICK,
-	      time: time
-	    });
-	  });
-	};
-
-	exports.setPlayerPosition = function (xPos, yPos) {
-	  AppDispatcher.dispatch({
-	    actionType: GameConstants.actions.SET_PLAYER_POSITION,
-	    position: {
-	      xPos: xPos,
-	      yPos: yPos
-	    }
-	  });
-	};
-
-	exports.switchPlayerDirection = function () {
-	  AppDispatcher.dispatch({
-	    actionType: GameConstants.actions.SWITCH_PLAYER_DIRECTION
-	  });
-	};
-
-/***/ },
-/* 187 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var GameConstants = __webpack_require__(184);
-
-	function Ball(posX, posY, angle) {
-	  this.angle = angle;
-	  this.posX = posX;
-	  this.posY = posY;
-	};
-
-	Ball.prototype.bounce = function (lineDirection) {
-
-	  var velX = Math.sin(this.angle);
-	  var velY = Math.cos(this.angle);
-
-	  if (lineDirection === 'HORIZONTAL') {
-	    velY = -1 * velY;
-	  } else if (lineDirection === 'VERTICAL') {
-	    velX = -1 * velX;
-	  }
-
-	  this.angle = Math.atan2(velX, velY);
-	};
-
-	Ball.prototype.draw = function (ctx) {
-
-	  ctx.beginPath();
-	  ctx.fillStyle = GameConstants.BALL_INSIDE_COLOR;
-	  ctx.strokeStyle = GameConstants.BALL_OUTLINE_COLOR;
-	  ctx.lineWidth = GameConstants.BALL_BORDER_WIDTH;
-
-	  var radius = GameConstants.BALL_RADIUS - ctx.lineWidth / 2;
-
-	  ctx.arc(this.posX, this.posY, radius, 0, Math.PI * 2);
-
-	  ctx.fill();
-	  ctx.stroke();
-	};
-
-	module.exports = Ball;
-
-/***/ },
 /* 188 */
 /***/ function(module, exports) {
 
@@ -27403,99 +27459,119 @@
 
 	'use strict';
 
-	var AppDispatcher = __webpack_require__(160);
-	var Store = __webpack_require__(164).Store;
+	var React = __webpack_require__(1);
+	var PropTypes = React.PropTypes;
 
-	var GameConstants = __webpack_require__(184);
+	var AppDispatcher = __webpack_require__(161);
+
 	var Actions = __webpack_require__(186);
 
-	var Segment = __webpack_require__(185);
-
 	var BoardStore = __webpack_require__(159);
+	var GameStore = __webpack_require__(160);
+	var BallStore = __webpack_require__(183);
 
-	var Ball = __webpack_require__(187);
+	var GameConstants = __webpack_require__(182);
 
-	var PlayerStore = new Store(AppDispatcher);
+	var Game = React.createClass({
+	  displayName: 'Game',
 
-	var _direction = 'VERTICAL';
-	var _context;
 
-	var _position = {
-	  xPos: 50,
-	  yPos: 50
-	};
+	  getInitialState: function getInitialState() {
 
-	PlayerStore.draw = function () {
+	    return {
+	      gameStatus: GameStore.status()
+	    };
+	  },
 
-	  _context.beginPath();
-	  _context.lineWidth = 4;
-	  _context.arc(_position.xPos, _position.yPos, 5, 0, Math.PI * 2);
-	  _context.stroke();
-	  _context.beginPath();
+	  componentDidMount: function componentDidMount() {
 
-	  var lines = {
-	    HORIZONTAL: [[3, 0, 10, 0], [-3, 0, -10, 0]],
-	    VERTICAL: [[0, 3, 0, 10], [0, -3, 0, -10]]
-	  };
+	    this.canvas = this.refs.gameCanvas;
 
-	  lines[_direction].forEach(function (line) {
-	    _context.moveTo(_position.xPos + line[0], _position.yPos + line[1]);
-	    _context.lineTo(_position.xPos + line[2], _position.yPos + line[3]);
-	    _context.stroke();
-	  });
-	};
+	    this.canvas.width = GameConstants.CANVAS_WIDTH;
+	    this.canvas.height = GameConstants.CANVAS_HEIGHT;
 
-	PlayerStore.setContext = function (ctx) {
-	  _context = ctx;
-	};
+	    this.canvasContext = this.canvas.getContext('2d');
 
-	PlayerStore.setPosition = function (position) {
+	    Actions.setContext(this.canvasContext);
 
-	  _position = position;
-	};
+	    document.addEventListener('keydown', this.handleKey, false);
 
-	PlayerStore.switchPlayerDirection = function () {
+	    this.gameListener = GameStore.addListener(this.gameChange);
 
-	  _direction = _direction === 'VERTICAL' ? 'HORIZONTAL' : 'VERTICAL';
-	};
+	    Actions.startGame();
+	  },
 
-	PlayerStore.attemptMove = function () {
+	  componentWillUnmount: function componentWillUnmount() {
+	    document.removeEventListener('keydown', this.handleKey);
+	    this.gameListener.remove();
+	  },
 
-	  var d = GameConstants.NEW_WALL_SPEED;
-	  var directions = _direction === 'VERTICAL' ? [{ dX: 0, dY: 1 }, { dX: 0, dY: -1 }] : [{ dX: 1, dY: 0 }, { dX: -1, dY: 0 }];
+	  handleClick: function handleClick(e) {
+	    e.preventDefault();
 
-	  var xCoord = Math.round((_position.xPos - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH);
-	  var yCoord = Math.round((_position.yPos - GameConstants.LINE_WIDTH / 2) / GameConstants.LINE_WIDTH);
+	    AppDispatcher.dispatch({
+	      actionType: GameConstants.actions.ATTEMPT_MOVE
+	    });
+	  },
 
-	  var boardSegments = BoardStore.beingCreatedSegments();
+	  handleKey: function handleKey(e) {
 
-	  if (!boardSegments.length && BoardStore.cell(xCoord, yCoord) === 'NONE') {
+	    if (e.keyCode === 32) {
 
-	    BoardStore.setNewSegments([new Segment({ x: xCoord, y: yCoord }, { x: xCoord, y: yCoord },
-	    // {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
-	    // {x: xCoord + (directions[0].dX), y: yCoord + (directions[0].dY)},
-	    directions[0], 'UP'), new Segment({ x: xCoord, y: yCoord }, { x: xCoord, y: yCoord }, directions[1], 'DOWN')]);
+	      Actions.switchPlayerDirection();
+	    };
+	  },
+
+	  handleMouseMove: function handleMouseMove(e) {
+
+	    var xPos = e.clientX;
+	    var yPos = e.clientY;
+
+	    Actions.setPlayerPosition(xPos, yPos);
+	  },
+
+	  gameChange: function gameChange() {
+	    var gameStatus = GameStore.status();
+
+	    switch (gameStatus) {
+	      case 'PLAYING':
+	        Actions.tick();
+	        break;
+	      case 'DEAD':
+
+	        break;
+	      case 'WAITING':
+
+	        break;
+
+	    }
+
+	    if (gameStatus === 'PLAYING') {
+	      // Actions.tick();
+	    }
+
+	    this.forceUpdate();
+	  },
+
+	  render: function render() {
+	    return React.createElement(
+	      'div',
+	      { onKeyDown: this.handleKey },
+	      React.createElement('canvas', { id: 'game-canvas', ref: 'gameCanvas',
+	        onMouseMove: this.handleMouseMove,
+	        onClick: this.handleClick }),
+	      React.createElement(
+	        'div',
+	        null,
+	        'Percentage Cleared: ',
+	        BoardStore.percentageFinishedString()
+	      )
+	    );
 	  }
-	};
 
-	PlayerStore.__onDispatch = function (payload) {
-	  switch (payload.actionType) {
-	    case GameConstants.actions.SET_CONTEXT:
-	      PlayerStore.setContext(payload.context);
-	      break;
-	    case GameConstants.actions.SET_PLAYER_POSITION:
-	      PlayerStore.setPosition(payload.position);
-	      break;
-	    case GameConstants.actions.SWITCH_PLAYER_DIRECTION:
-	      PlayerStore.switchPlayerDirection();
-	      break;
-	    case GameConstants.actions.ATTEMPT_MOVE:
-	      PlayerStore.attemptMove();
-	      break;
-	  }
-	};
+	});
 
-	module.exports = PlayerStore;
+	module.exports = Game;
 
 /***/ }
 /******/ ]);
