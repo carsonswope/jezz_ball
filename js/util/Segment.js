@@ -74,7 +74,7 @@ Segment.prototype.allCoordinates = function() {
   var coords = [];
 
   if (this.startCoord.x === this.endCoord.x) {
-    //horizontal line
+    //vertical line
 
     if (this.startCoord.y < this.endCoord.y) {
       for (var i = this.startCoord.y; i <= this.endCoord.y; i++) {
@@ -93,20 +93,20 @@ Segment.prototype.allCoordinates = function() {
     }
 
   } else {
-    //vertical line
+    //horizontal line
 
     if (this.startCoord.x < this.endCoord.x) {
       for (var i = this.startCoord.x; i <= this.endCoord.x; i++) {
         coords.push({
-          x: this.startCoord.y,
-          y: i
+          x: i,
+          y: this.startCoord.y
         });
       }
     } else {
       for (var i = this.startCoord.x; i >= this.endCoord.x; i--) {
         coords.push({
-          x: this.startCoord.y,
-          y: i
+          x: i,
+          y: this.startCoord.y
         });
       }
     }

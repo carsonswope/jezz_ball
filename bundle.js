@@ -19792,6 +19792,18 @@
 	  for (var i = 0; i < _beingCreatedSegments.length; i++) {
 	    _beingCreatedSegments[i].draw(_context, 'SOLID');
 	  }
+
+	  _context.fillStyle = GameConstants.SOLID_SEGMENT_COLOR;
+
+	  for (var i = 0; i <= _horizontalDivisions; i++) {
+	    for (var j = 0; j <= _verticalDivisions; j++) {
+	      _cells[i][j];
+
+	      if (_cells[i][j] === 'FILL') {
+	        _context.fillRect(i * GameConstants.LINE_WIDTH, j * GameConstants.LINE_WIDTH, GameConstants.LINE_WIDTH, GameConstants.LINE_WIDTH);
+	      }
+	    }
+	  }
 	};
 
 	BoardStore.reset = function () {
@@ -19831,6 +19843,13 @@
 
 	  var areas;
 	  var segCoords = segment.allCoordinates();
+
+	  segCoords.forEach(function (coord) {
+	    if (_cells[coord.x][coord.y] === 'NONE') {
+	      _cells[coord.x][coord.y] = 'WALL';
+	      _blockedOff += 1;
+	    }
+	  });
 
 	  if (segment.startCoord.x === segment.endCoord.x) {
 	    //segment is vertical
@@ -19875,14 +19894,78 @@
 	    ballPositions[gridPos.x][gridPos.y] = 'BALL';
 	  });
 
-	  ballPositions;
-	  areas;
-	  _cells;
+	  var toSearch = areas[0];
+	  var currentCell;
+	  var toFill = [];
+	  var searched = {};
+	  var neighbors;
+	  var n;
+
+	  for (var k = 0; k < areas.length; k++) {
+	    toSearch = areas[k];
+	    toFill = [];
+
+	    while (toSearch.length) {
+
+	      currentCell = toSearch.shift();
+
+	      if (ballPositions[currentCell.x] && ballPositions[currentCell.x][currentCell.y]) {
+	        toFill = [];
+	        break;
+	      }
+
+	      if (_cells[currentCell.x][currentCell.y] === 'NONE') {
+	        toFill.push({
+	          x: currentCell.x, y: currentCell.y
+	        });
+
+	        neighbors = BoardStore.getNeighbors(currentCell);
+
+	        for (var i = 0; i < neighbors.length; i++) {
+	          n = neighbors[i];
+
+	          if (!searched[n.x]) {
+	            searched[n.x] = {};
+	          }
+	          if (!searched[n.x][n.y]) {
+	            toSearch.push({ x: n.x, y: n.y });
+	            searched[n.x][n.y] = true;
+	          }
+	        }
+	      }
+	    }
+
+	    if (toFill.length) {
+
+	      for (var h = 0; h < toFill.length; h++) {
+
+	        n = toFill[h];
+
+	        if (_cells[n.x][n.y] === 'NONE') {
+	          _cells[n.x][n.y] = 'FILL';
+	          _blockedOff += 1;
+	        }
+	      }
+	    }
+	  }
 	};
 
 	BoardStore.isBallThere = function (positions, position) {
 
 	  return positions[position.x] && positions[position.y] === 'BALL';
+	};
+
+	BoardStore.getNeighbors = function (coordinate) {
+	  var ways = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]].map(function (way) {
+	    return {
+	      x: coordinate.x + way[0],
+	      y: coordinate.y + way[1]
+	    };
+	  });
+
+	  return ways.filter(function (way) {
+	    return way.x > 0 && way.x <= _horizontalDivisions && way.y > 0 && way.y <= _verticalDivisions;
+	  });
 	};
 
 	BoardStore.percentageFinished = function () {
@@ -27267,7 +27350,7 @@
 	  var coords = [];
 
 	  if (this.startCoord.x === this.endCoord.x) {
-	    //horizontal line
+	    //vertical line
 
 	    if (this.startCoord.y < this.endCoord.y) {
 	      for (var i = this.startCoord.y; i <= this.endCoord.y; i++) {
@@ -27285,20 +27368,20 @@
 	      }
 	    }
 	  } else {
-	    //vertical line
+	    //horizontal line
 
 	    if (this.startCoord.x < this.endCoord.x) {
 	      for (var i = this.startCoord.x; i <= this.endCoord.x; i++) {
 	        coords.push({
-	          x: this.startCoord.y,
-	          y: i
+	          x: i,
+	          y: this.startCoord.y
 	        });
 	      }
 	    } else {
 	      for (var i = this.startCoord.x; i >= this.endCoord.x; i--) {
 	        coords.push({
-	          x: this.startCoord.y,
-	          y: i
+	          x: i,
+	          y: this.startCoord.y
 	        });
 	      }
 	    }
