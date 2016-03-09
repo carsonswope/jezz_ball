@@ -73,10 +73,10 @@ var Game = React.createClass({
         Actions.tick();
         break;
       case 'DEAD':
-        Actions.tick();
+        // Actions.tick();
         break;
       case 'WAITING':
-        Actions.tick();
+        // Actions.tick();
         break;
 
     }

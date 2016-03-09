@@ -63,7 +63,7 @@ GameStore.tick = function(newTime) {
     var dT = newTime - _time;
     _time = newTime;
 
-    if (dT > 22) { dT = 0; }
+    if (dT > 22) { dT = 16.6; }
 
     BoardStore.tick(dT);
     BallStore.tick(dT);

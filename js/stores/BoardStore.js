@@ -208,17 +208,11 @@ BoardStore.checkForAutoFill = function(segment) {
     //segment is vertical
     areas = [
       segCoords.map(function(coord){
-        return {
-          x: coord.x + 1,
-          y: coord.y
-        }
+        return { x: coord.x + 1, y: coord.y }
       }),
 
       segCoords.map(function(coord){
-        return {
-          x: coord.x - 1,
-          y: coord.y
-        }
+        return { x: coord.x - 1, y: coord.y }
       })
     ];
 
@@ -226,17 +220,11 @@ BoardStore.checkForAutoFill = function(segment) {
     //segment is horizontal
     areas = [
       segCoords.map(function(coord){
-        return {
-          x: coord.x,
-          y: coord.y + 1
-        }
+        return { x: coord.x, y: coord.y + 1 }
       }),
 
       segCoords.map(function(coord){
-        return {
-          x: coord.x,
-          y: coord.y - 1
-        }
+        return { x: coord.x, y: coord.y - 1 }
       })
     ];
 
@@ -255,7 +243,6 @@ BoardStore.checkForAutoFill = function(segment) {
     ballPositions[gridPos.x][gridPos.y] = 'BALL';
   });
 
-  var toSearch = areas[0];
   var currentCell;
   var toFill = [];
   var searched = {};
@@ -263,7 +250,7 @@ BoardStore.checkForAutoFill = function(segment) {
   var n;
 
   for (var k = 0; k < areas.length; k++) {
-    toSearch = areas[k]
+    var toSearch = areas[k]
     toFill = [];
 
     while (toSearch.length) {
