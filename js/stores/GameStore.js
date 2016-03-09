@@ -10,15 +10,17 @@ var MathUtil = require('../util/MathUtil');
 
 var GameStore = new Store(AppDispatcher);
 
-var _lives = 10;
+var _lives = 2;
 var _level = 1;
 var _time = 0;
 var _status = 'WAITING';
 var _context;
+var _score = 0;
 
-GameStore.status = function() {
-  return _status;
-};
+GameStore.status = function() { return _status; };
+GameStore.level = function() { return _level; };
+GameStore.score = function() { return _score; };
+GameStore.lives = function() { return _lives; };
 
 GameStore.finishGame = function() {
   _status = 'DEAD';
@@ -29,8 +31,7 @@ GameStore.finishLevel = function() {
   _status = 'WAITING';
   _level += 1;
   _lives = _level + 1;
-
-  GameStore.__emitChange();
+  _score += _level * BoardStore.percentageFinished() * 100;
 };
 
 
@@ -45,8 +46,9 @@ GameStore.startLevel = function() {
 
 GameStore.startGame = function() {
 
-  _lives = 10;
+  _lives = 2;
   _level = 1;
+  _score = 0;
 
   GameStore.startLevel();
 
@@ -57,12 +59,21 @@ GameStore.tick = function(newTime) {
   var dT = newTime - _time;
   _time = newTime;
 
+  if (dT > 22) { dT = 0; }
+
   BoardStore.tick(dT);
   BallStore.tick(dT);
 
   GameStore.checkForCollisions();
 
   GameStore.draw();
+
+  if (_lives < 1) {
+    _status = 'DEAD';
+  } else if (BoardStore.percentageFinished() > 0.75 &&
+    !BoardStore.beingCreatedSegments().length) {
+    GameStore.finishLevel();
+  }
 
   GameStore.__emitChange();
 
@@ -111,7 +122,7 @@ GameStore.checkForCollisions = function() {
       if (dist.distance < GameConstants.BALL_RADIUS && toRemove.indexOf(i) === -1){
 
         toRemove.push(i);
-
+        _lives -= 1;
       }
 
     }
@@ -179,6 +190,9 @@ GameStore.__onDispatch = function(payload) {
       GameStore.tick(payload.time);
       break;
     case GameConstants.actions.START_GAME:
+      GameStore.startGame();
+      break;
+    case GameConstants.actions.START_LEVEL:
       GameStore.startLevel();
       break;
     case GameConstants.actions.SET_CONTEXT:

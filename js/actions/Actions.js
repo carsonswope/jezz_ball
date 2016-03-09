@@ -15,6 +15,12 @@ exports.startGame = function() {
 
 };
 
+exports.startLevel = function() {
+  AppDispatcher.dispatch({
+    actionType: GameConstants.actions.START_LEVEL
+  })
+}
+
 exports.tick = function() {
   requestAnimationFrame( function(time){
     AppDispatcher.dispatch({

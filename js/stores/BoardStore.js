@@ -11,7 +11,6 @@ var BoardStore = new Store(AppDispatcher);
 
 var _solidSegments = [];
 var _beingCreatedSegments = [];
-var _rectangles = [];
 var _context;
 var _cells = {};
 var _blockedOff = 0;
@@ -20,13 +19,6 @@ var _total = 1;
 var _horizontalDivisions = 0;
 var _verticalDivisions = 0;
 
-// a segment looks like this:
-//  {
-//   startX:
-//   startY:
-//   endX:
-//   endY:
-//  }
 
 BoardStore.tick = function(dT) {
 
@@ -46,8 +38,7 @@ BoardStore.solidifySegments = function(segs) {
   var newSolidSegs = []
 
   if (segs.length === 2) {
-    // newSolidSegs.push( _beingCreatedSegments.pop());
-    // newSolidSegs.push(_beingCreatedSegments.pop());
+
     seg = new Segment(
             _beingCreatedSegments.pop().endCoord,
             _beingCreatedSegments.pop().endCoord,
@@ -165,11 +156,11 @@ BoardStore.reset = function() {
   var h = _verticalDivisions;
   var w = _horizontalDivisions;
 
-  for (var i = 0; i <= _horizontalDivisions; i++) {
+  _cells = {};
+
+  for (var i = 0; i <= w; i++) {
     _cells[i] = {};
-
-    for (var j = 0; j <= _verticalDivisions; j++) {
-
+    for (var j = 0; j <= h; j++) {
       _cells[i][j] = 'NONE';
     }
   }
@@ -180,6 +171,8 @@ BoardStore.reset = function() {
     new Segment({x: w,   y: h}, {x: w,   y: 0}),
     new Segment({x: w-1, y: 0}, {x: 1,   y: 0})
   ];
+
+  _blockedOff = 0;
 
   _solidSegments.forEach(function(segment){
     segment.allCoordinates().forEach(function(coord){
@@ -353,7 +346,7 @@ BoardStore.percentageFinished = function() {
 };
 
 BoardStore.percentageFinishedString = function() {
-  return (BoardStore.percentageFinished() * 100).toString().slice(0,3) + '%';
+  return (BoardStore.percentageFinished() * 100).toString().slice(0,4) + '%';
 };
 
 BoardStore.setContext = function(context) {

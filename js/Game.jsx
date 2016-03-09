@@ -24,19 +24,13 @@ var Game = React.createClass({
   componentDidMount: function() {
 
     this.canvas = this.refs.gameCanvas;
-
     this.canvas.width = GameConstants.CANVAS_WIDTH;
     this.canvas.height = GameConstants.CANVAS_HEIGHT;
-
     this.canvasContext = this.canvas.getContext('2d');
-
     Actions.setContext(this.canvasContext);
-
     document.addEventListener('keydown', this.handleKey, false);
-
     this.gameListener = GameStore.addListener(this.gameChange);
-
-    Actions.startGame();
+    // Actions.startGame();
 
   },
 
@@ -86,11 +80,17 @@ var Game = React.createClass({
 
     }
 
-    if (gameStatus === 'PLAYING') {
-      // Actions.tick();
-    }
-
     this.forceUpdate();
+
+  },
+
+  startGame: function() {
+
+    if (GameStore.level() === 1) {
+      Actions.startGame();
+    } else {
+      Actions.startLevel();
+    }
 
   },
 
@@ -103,7 +103,14 @@ var Game = React.createClass({
           onClick={this.handleClick}>
         </canvas>
         <div>
-          Percentage Cleared: {BoardStore.percentageFinishedString()}
+          Level: {GameStore.level()}<br />
+          Lives: {GameStore.lives()}<br />
+          Percentage Cleared: {BoardStore.percentageFinishedString()}<br />
+          Status: {GameStore.status()}
+          <div onClick={this.startGame}>
+            startgame
+          </div>
+          Score: {GameStore.score()}
         </div>
 
       </div>

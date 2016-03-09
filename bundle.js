@@ -19685,7 +19685,6 @@
 
 	var _solidSegments = [];
 	var _beingCreatedSegments = [];
-	var _rectangles = [];
 	var _context;
 	var _cells = {};
 	var _blockedOff = 0;
@@ -19693,14 +19692,6 @@
 
 	var _horizontalDivisions = 0;
 	var _verticalDivisions = 0;
-
-	// a segment looks like this:
-	//  {
-	//   startX:
-	//   startY:
-	//   endX:
-	//   endY:
-	//  }
 
 	BoardStore.tick = function (dT) {
 
@@ -19719,8 +19710,7 @@
 	  var newSolidSegs = [];
 
 	  if (segs.length === 2) {
-	    // newSolidSegs.push( _beingCreatedSegments.pop());
-	    // newSolidSegs.push(_beingCreatedSegments.pop());
+
 	    seg = new Segment(_beingCreatedSegments.pop().endCoord, _beingCreatedSegments.pop().endCoord, null, 'SOLID');
 
 	    BoardStore.checkForAutoFill(seg);
@@ -19814,16 +19804,18 @@
 	  var h = _verticalDivisions;
 	  var w = _horizontalDivisions;
 
-	  for (var i = 0; i <= _horizontalDivisions; i++) {
+	  _cells = {};
+
+	  for (var i = 0; i <= w; i++) {
 	    _cells[i] = {};
-
-	    for (var j = 0; j <= _verticalDivisions; j++) {
-
+	    for (var j = 0; j <= h; j++) {
 	      _cells[i][j] = 'NONE';
 	    }
 	  }
 
 	  _solidSegments = [new Segment({ x: 0, y: 0 }, { x: 0, y: h }), new Segment({ x: 1, y: h }, { x: w - 1, y: h }), new Segment({ x: w, y: h }, { x: w, y: 0 }), new Segment({ x: w - 1, y: 0 }, { x: 1, y: 0 })];
+
+	  _blockedOff = 0;
 
 	  _solidSegments.forEach(function (segment) {
 	    segment.allCoordinates().forEach(function (coord) {
@@ -19973,7 +19965,7 @@
 	};
 
 	BoardStore.percentageFinishedString = function () {
-	  return (BoardStore.percentageFinished() * 100).toString().slice(0, 3) + '%';
+	  return (BoardStore.percentageFinished() * 100).toString().slice(0, 4) + '%';
 	};
 
 	BoardStore.setContext = function (context) {
@@ -20008,14 +20000,24 @@
 
 	var GameStore = new Store(AppDispatcher);
 
-	var _lives = 10;
+	var _lives = 2;
 	var _level = 1;
 	var _time = 0;
 	var _status = 'WAITING';
 	var _context;
+	var _score = 0;
 
 	GameStore.status = function () {
 	  return _status;
+	};
+	GameStore.level = function () {
+	  return _level;
+	};
+	GameStore.score = function () {
+	  return _score;
+	};
+	GameStore.lives = function () {
+	  return _lives;
 	};
 
 	GameStore.finishGame = function () {
@@ -20027,8 +20029,7 @@
 	  _status = 'WAITING';
 	  _level += 1;
 	  _lives = _level + 1;
-
-	  GameStore.__emitChange();
+	  _score += _level * BoardStore.percentageFinished() * 100;
 	};
 
 	GameStore.startLevel = function () {
@@ -20041,8 +20042,9 @@
 
 	GameStore.startGame = function () {
 
-	  _lives = 10;
+	  _lives = 2;
 	  _level = 1;
+	  _score = 0;
 
 	  GameStore.startLevel();
 	};
@@ -20052,12 +20054,22 @@
 	  var dT = newTime - _time;
 	  _time = newTime;
 
+	  if (dT > 22) {
+	    dT = 0;
+	  }
+
 	  BoardStore.tick(dT);
 	  BallStore.tick(dT);
 
 	  GameStore.checkForCollisions();
 
 	  GameStore.draw();
+
+	  if (_lives < 1) {
+	    _status = 'DEAD';
+	  } else if (BoardStore.percentageFinished() > 0.75 && !BoardStore.beingCreatedSegments().length) {
+	    GameStore.finishLevel();
+	  }
 
 	  GameStore.__emitChange();
 	};
@@ -20102,6 +20114,7 @@
 	      if (dist.distance < GameConstants.BALL_RADIUS && toRemove.indexOf(i) === -1) {
 
 	        toRemove.push(i);
+	        _lives -= 1;
 	      }
 	    }
 	  }
@@ -20168,6 +20181,9 @@
 	      GameStore.tick(payload.time);
 	      break;
 	    case GameConstants.actions.START_GAME:
+	      GameStore.startGame();
+	      break;
+	    case GameConstants.actions.START_LEVEL:
 	      GameStore.startLevel();
 	      break;
 	    case GameConstants.actions.SET_CONTEXT:
@@ -26954,16 +26970,16 @@
 	//
 	// this.canvasContext = this.canvas.getContext('2d');
 
-	exports.CANVAS_WIDTH = 1000;
-	exports.CANVAS_HEIGHT = 600;
+	exports.CANVAS_WIDTH = 800;
+	exports.CANVAS_HEIGHT = 500;
 
-	exports.NEW_WALL_SPEED = 0.04;
+	exports.NEW_WALL_SPEED = 0.03;
 	exports.BALL_SPEED = 0.5;
-	exports.PERCENTAGE_TO_WIN = 75;
+	exports.PERCENTAGE_TO_WIN = 78;
 
-	exports.SOLID_SEGMENT_COLOR = 'rgba(0,0,10,0.5)';
-	exports.DOWN_COLOR = 'rgba(0,0,200,0.5)';
-	exports.UP_COLOR = 'rgba(200,0,0,0.5)';
+	exports.SOLID_SEGMENT_COLOR = 'rgba(0,0,10,1)';
+	exports.DOWN_COLOR = 'rgba(0,0,200,1)';
+	exports.UP_COLOR = 'rgba(200,0,0,1)';
 
 	exports.BALL_OUTLINE_COLOR = 'green';
 	exports.BALL_INSIDE_COLOR = 'yellow';
@@ -26977,6 +26993,7 @@
 	  TICK: 'TICK',
 	  SET_CONTEXT: 'SET_CONTEXT',
 	  START_GAME: 'START_GAME',
+	  START_LEVEL: 'START_LEVEL',
 	  SWITCH_PLAYER_DIRECTION: 'SWITCH_PLAYER_DIRECTION',
 	  ATTEMPT_MOVE: 'ATTEMPT_MOVE',
 	  SET_PLAYER_POSITION: 'SET_PLAYER_POSITION'
@@ -27248,6 +27265,12 @@
 	exports.startGame = function () {
 	  AppDispatcher.dispatch({
 	    actionType: GameConstants.actions.START_GAME
+	  });
+	};
+
+	exports.startLevel = function () {
+	  AppDispatcher.dispatch({
+	    actionType: GameConstants.actions.START_LEVEL
 	  });
 	};
 
@@ -27569,19 +27592,13 @@
 	  componentDidMount: function componentDidMount() {
 
 	    this.canvas = this.refs.gameCanvas;
-
 	    this.canvas.width = GameConstants.CANVAS_WIDTH;
 	    this.canvas.height = GameConstants.CANVAS_HEIGHT;
-
 	    this.canvasContext = this.canvas.getContext('2d');
-
 	    Actions.setContext(this.canvasContext);
-
 	    document.addEventListener('keydown', this.handleKey, false);
-
 	    this.gameListener = GameStore.addListener(this.gameChange);
-
-	    Actions.startGame();
+	    // Actions.startGame();
 	  },
 
 	  componentWillUnmount: function componentWillUnmount() {
@@ -27629,11 +27646,16 @@
 
 	    }
 
-	    if (gameStatus === 'PLAYING') {
-	      // Actions.tick();
-	    }
-
 	    this.forceUpdate();
+	  },
+
+	  startGame: function startGame() {
+
+	    if (GameStore.level() === 1) {
+	      Actions.startGame();
+	    } else {
+	      Actions.startLevel();
+	    }
 	  },
 
 	  render: function render() {
@@ -27646,8 +27668,24 @@
 	      React.createElement(
 	        'div',
 	        null,
+	        'Level: ',
+	        GameStore.level(),
+	        React.createElement('br', null),
+	        'Lives: ',
+	        GameStore.lives(),
+	        React.createElement('br', null),
 	        'Percentage Cleared: ',
-	        BoardStore.percentageFinishedString()
+	        BoardStore.percentageFinishedString(),
+	        React.createElement('br', null),
+	        'Status: ',
+	        GameStore.status(),
+	        React.createElement(
+	          'div',
+	          { onClick: this.startGame },
+	          'startgame'
+	        ),
+	        'Score: ',
+	        GameStore.score()
 	      )
 	    );
 	  }
