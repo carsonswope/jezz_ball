@@ -307,7 +307,7 @@ BoardStore.checkForAutoFill = function(segment) {
 BoardStore.isBallThere = function(positions, position) {
 
   return (positions[position.x] &&
-          positions[position.y] === 'BALL');
+          positions[position.x][position.y] === 'BALL');
 
 };
 
