@@ -14,25 +14,24 @@ var GameConstants = require('./constants/GameConstants');
 var Game = React.createClass({
 
   getInitialState: function() {
-
-    return {
-      gameStatus: GameStore.status()
-    }
-
+    return { gameStatus: GameStore.status() }
   },
 
   componentDidMount: function() {
-
-    this.canvas = this.refs.gameCanvas;
-    this.canvas.width = GameConstants.CANVAS_WIDTH;
-    this.canvas.height = GameConstants.CANVAS_HEIGHT;
-    this.canvasContext = this.canvas.getContext('2d');
-    Actions.setContext(this.canvasContext);
+    this.setupCanvas();
     document.addEventListener('keydown', this.handleKey, false);
     this.gameListener = GameStore.addListener(this.gameChange);
     BoardStore.reset();
     Actions.tick();
+  },
 
+  setupCanvas: function(){
+    this.canvas = this.refs.gameCanvas;
+    this.canvas.width = GameConstants.CANVAS_WIDTH;
+    this.canvas.height = GameConstants.CANVAS_HEIGHT;
+    this.canvasRect = this.canvas.getBoundingClientRect();
+    this.canvasContext = this.canvas.getContext('2d');
+    Actions.setContext(this.canvasContext);
   },
 
   componentWillUnmount: function(){
@@ -42,47 +41,25 @@ var Game = React.createClass({
 
   handleClick: function(e) {
     e.preventDefault();
-
     AppDispatcher.dispatch({
       actionType: GameConstants.actions.ATTEMPT_MOVE
     })
   },
 
   handleKey: function(e) {
-
-    if (e.keyCode === 32) {
-
-      Actions.switchPlayerDirection();
-
-    };
+    if (e.keyCode === 32) { Actions.switchPlayerDirection(); };
   },
 
   handleMouseMove: function(e) {
-
-    var xPos = e.clientX;
-    var yPos = e.clientY;
-
+    var xPos = e.clientX - this.canvasRect.left;
+    var yPos = e.clientY - this.canvasRect.top;
     Actions.setPlayerPosition(xPos, yPos);
   },
 
   gameChange: function() {
     var gameStatus = GameStore.status();
-
-    switch (gameStatus) {
-      case 'PLAYING':
-        Actions.tick();
-        break;
-      case 'DEAD':
-        // Actions.tick();
-        break;
-      case 'WAITING':
-        // Actions.tick();
-        break;
-
-    }
-
-    this.forceUpdate();
-
+    if (gameStatus == 'PLAYING') { Actions.tick(); }
+    this.setState({ gameStatus: gameStatus });
   },
 
   startGame: function() {
@@ -95,14 +72,42 @@ var Game = React.createClass({
 
   },
 
+  statsBar: function() {
+    return(
+      <div className='detail'>
+        <div className='detail-stat'>
+          Score: {GameStore.scoreString()}
+        </div>
+        <div className='detail-stat'>
+          Level: {GameStore.level()}
+        </div>
+        <div className='detail-stat'>
+          Lives: {GameStore.lives()}
+        </div>
+        <div className='detail-stat'>
+          Filled: {BoardStore.percentageFinishedString()}
+        </div>
+      </div>
+    );
+  },
+
   render: function() {
     return (
-      <div onKeyDown={this.handleKey}>
+      <div style={{width: '100%', textAlign: 'center'}}
+        onKeyDown={this.handleKey}>
+
+        <div className='title'> Jezzball </div>
+
+        {this.statsBar()}
 
         <canvas id='game-canvas' ref='gameCanvas'
           onMouseMove={this.handleMouseMove}
           onClick={this.handleClick}>
         </canvas>
+
+        <div><a href='https://github.com/carsonswope/jezz_ball'
+            className='git-link'>github</a>
+        </div>
 
       </div>
     );

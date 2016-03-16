@@ -8,10 +8,6 @@ var Actions = require('./actions/Actions');
 
 var Game = require('./Game');
 
-window.BoardStore = BoardStore;
-window.BallStore = BallStore;
-window.GameStore = GameStore;
-window.Actions = Actions;
 
 document.addEventListener('DOMContentLoaded', function(){
 

@@ -182,8 +182,8 @@ GameStore.draw = function() {
   BoardStore.draw();
 
   if (_status === 'WAITING'){
-    _context.fillStyle = 'rgba(0,200,0,0.7)';
-    _context.strokeStyle = 'rgba(0,100,100,0.8)';
+    _context.fillStyle = 'rgba(0,200,0,0.8)';
+    _context.strokeStyle = 'rgba(0,100,100,0.9)';
     _context.lineWidth = 20
     _context.fillRect(100,100,GameConstants.CANVAS_WIDTH - 200,270);
     _context.strokeRect(100,100,GameConstants.CANVAS_WIDTH - 200,270);
@@ -211,8 +211,8 @@ GameStore.draw = function() {
 
   } else if (_status === 'DEAD') {
 
-    _context.fillStyle = 'rgba(200,0,0,0.7)';
-    _context.strokeStyle = 'rgba(100,0,0,0.8)';
+    _context.fillStyle = 'rgba(200,0,0,0.8)';
+    _context.strokeStyle = 'rgba(100,0,0,0.9)';
     _context.lineWidth = 20
     _context.fillRect(100,100,GameConstants.CANVAS_WIDTH - 200,270);
     _context.strokeRect(100,100,GameConstants.CANVAS_WIDTH - 200,270);
@@ -227,12 +227,6 @@ GameStore.draw = function() {
     _context.fillText('click to play again', 120, 280);
 
 
-  } else {
-
-    _context.font = '18px sans serif';
-    _context.fillStyle = 'red';
-    _context.fillText('Lives: ' + _lives.toString(), 12, GameConstants.CANVAS_HEIGHT - 12);
-    _context.fillText(BoardStore.percentageFinishedString() + ' filled', 12, GameConstants.CANVAS_HEIGHT-28);
   }
 
   PlayerStore.draw();
