@@ -1,6 +1,7 @@
 # Jezzball
 
-This is a remake of the old Microsoft game Jezzball
+This is a remake of the old Microsoft game Jezzball.
+
 Play it here: [Jezzball][Jezzball]
 [Jezzball]: http://jezzball.herokuapp.com
 
